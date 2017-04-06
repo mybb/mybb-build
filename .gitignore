@@ -1,0 +1,6 @@
+/build
+/patch
+/previous-clean-source
+/raw-source
+/phing.phar
+/phing-latest.phar

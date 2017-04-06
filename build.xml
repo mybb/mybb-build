@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<project name="MyBB" default="full" basedir=".">
+    <!-- build settings -->
+    <property file="build.properties" />
+
+    <property name="sourceDirectory" value="${project.basedir}/raw-source" />
+    <property name="previousCleanSourceDirectory" value="${project.basedir}/previous-clean-source" />
+
+    <!-- project settings -->
+    <property name="distSetSourceSubdirectory" value="Upload" />
+    <property name="installSubdirectory" value="install" />
+
+    <property name="classCoreVersionRegex">public \$version = "([0-9a-zA-Z.-]+)";</property>
+    <property name="englishManifestVersionRegex">\$langinfo\['version'\] = "([0-9a-zA-Z.-]+)";</property>
+
+    <!-- file structure settings -->
+    <property name="distSetPrefix" value="mybb_" />
+    <property name="updateSetPrefix" value="changed_files_" />
+    <property name="distChecksumsFilePrefix" value="checksums_" />
+    <property name="distRemovedFilesFilePrefix" value="removed_files_" />
+
+    <!-- files to exclude when copying files for distribution packages -->
+    <patternset id="dist_excluded_files">
+        <exclude name="**/.git/**"></exclude>
+        <exclude name="**/.DS_Store"></exclude>
+        <exclude name="**/.DS_Store?"></exclude>
+        <exclude name="**/._*"></exclude>
+        <exclude name="**/.Spotlight-V100"></exclude>
+        <exclude name="**/.Trashes"></exclude>
+        <exclude name="**/ehthumbs.db"></exclude>
+        <exclude name="**/Thumbs.db"></exclude>
+        <exclude name=".gitignore"></exclude>
+        <exclude name="CONTRIBUTING.md"></exclude>
+        <exclude name="LICENSE"></exclude>
+        <exclude name="readme.md"></exclude>
+    </patternset>
+
+    <!-- internal properties -->
+    <property name="outputDirectory" value="${project.basedir}/build2" />
+    <property name="patchDirectory" value="${project.basedir}/patch" />
+    <property name="distAddendumDirectory" value="${project.basedir}/dist-addendum" />
+
+    <propertyregex property="targetVersionCode" subject="${targetVersion}" pattern="[^0-9a-z]" replace="" match="$1" defaultValue="targetversion" />
+
+    <property name="distSetName" value="${distSetPrefix}${targetVersionCode}" />
+    <property name="updateSetName" value="${updateSetPrefix}${targetVersionCode}" />
+
+    <property name="distSetDirectory" value="${outputDirectory}/${distSetName}" />
+    <property name="updateSetDirectory" value="${outputDirectory}/${updateSetName}" />
+    <property name="distChecksumsFile" value="${outputDirectory}/${distChecksumsFilePrefix}${distSetName}" />
+    <property name="distRemovedFilesFile" value="${outputDirectory}/${distRemovedFilesFilePrefix}${targetVersionCode}" />
+
+    <property name="distSetSourceDirectory" value="${distSetDirectory}/${distSetSourceSubdirectory}" />
+
+    <!-- group tasks -->
+    <target name="dist-only" description="Executes tasks to build the distribution package" depends="prepare,copy-clean,hardcoded-versions,patch,dist-checksums,addendum,chmod,package,package-hash,package-size" />
+    <target name="full" description="Executes tasks to build both distribution and update packages" depends="prepare,copy-clean,hardcoded-versions,patch,dist-checksums,updateset,install-to-updateset-if-chosen,removed-files,addendum,chmod,package,updateset-package,package-hash,updateset-package-hash,package-size,updateset-package-size" />
+    <target name="hardcoded-versions" description="Attempts to read the hardcoded versions" depends="version-core,version-englishlang,previous-version-core" />
+
+    <!-- build process -->
+    <target name="prepare" description="Creates an empty directory for output files">
+        <delete dir="${outputDirectory}" quiet="true" />
+        <mkdir dir="${outputDirectory}" />
+    </target>
+
+    <target name="copy-clean" description="Copies files intended for distribution sets">
+        <mkdir dir="${distSetDirectory}" />
+        <mkdir dir="${distSetSourceDirectory}" />
+
+        <copy todir="${distSetSourceDirectory}">
+            <fileset dir="${sourceDirectory}">
+                <include name="**" />
+                <patternset refid="dist_excluded_files" />
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="version-core" description="Attempts to read the version hardcoded in the MyBB class in the target ">
+        <loadfile property="content" file="${distSetSourceDirectory}/inc/class_core.php" />
+        <propertyregex property="version" subject="${content}" pattern="${classCoreVersionRegex}" match="$1" defaultValue="Not found" />
+        <echo message="Version in inc/class_core.php: ${version}" />
+    </target>
+
+    <target name="version-englishlang" description="Attempts to read the version hardcoded in the English language manifest file">
+        <loadfile property="content" file="${distSetSourceDirectory}/inc/languages/english.php" />
+        <propertyregex property="version" subject="${content}" pattern="${englishManifestVersionRegex}" match="$1" defaultValue="Not found" />
+        <echo message="Version in inc/languages/english.php: ${version}" />
+    </target>
+
+    <target name="previous-version-core" description="Attempts to read the previous set's version hardcoded in the MyBB class">
+        <loadfile property="content" file="${previousCleanSourceDirectory}/inc/class_core.php" />
+        <propertyregex property="version" subject="${content}" pattern="${classCoreVersionRegex}" match="$1" defaultValue="Not found" />
+        <echo message="Version in previous inc/class_core.php: ${version}" />
+    </target>
+
+    <target name="patch" description="Applies attached git patches to the target file set">
+        <apply executable="git" dir="${distSetSourceDirectory}">
+            <arg value="apply" />
+            <fileset dir="${patchDirectory}">
+                <include name="**" />
+            </fileset>
+        </apply>
+    </target>
+
+    <target name="patch-reverse" description="Reverses attached git patches in the target file set">
+        <apply executable="git" dir="${distSetSourceDirectory}">
+            <arg value="apply" />
+            <arg value="--reverse" />
+            <fileset dir="${patchDirectory}">
+                <include name="**" />
+            </fileset>
+        </apply>
+    </target>
+
+    <target name="dist-checksums" description="Prints target file set checksums for different new line encodings">
+        <delete file="${distChecksumsFile}" quiet="true" />
+        <foreach param="filename" absparam="absfilename" target="dist-checksums-file">
+          <fileset dir="${distSetSourceDirectory}">
+                <include name="**" />
+                <type type="file" />
+          </fileset>
+        </foreach>
+    </target>
+
+    <target name="dist-checksums-file" hidden="true">
+        <if>
+            <available file="${absfilename}" type="file" />
+            <then>
+                <php function="str_replace" returnProperty="filenameStandardized">
+                    <param value="\" />
+                    <param value="/" />
+                    <param value="${filename}" />
+                </php>
+
+                <php returnProperty="hash"><![CDATA[
+                    md5_file('${absfilename}')
+                ]]></php>
+                <php returnProperty="hash2"><![CDATA[
+                    md5(str_replace(array("r\n", "\r", "\n"), "\r\n", file_get_contents('${absfilename}')))
+                ]]></php>
+                <php returnProperty="hash3"><![CDATA[
+                    md5(str_replace(array("\r\n", "\r"), "\n", file_get_contents('${absfilename}')))
+                ]]></php>
+                <php returnProperty="hash4"><![CDATA[
+                    md5(str_replace(array("\r\n", "\n"), "\r", file_get_contents('${absfilename}')))
+                ]]></php>
+
+                <echo file="${distChecksumsFile}" append="true">${hash} ./${filenameStandardized}${line.separator}</echo>
+                <echo file="${distChecksumsFile}" append="true">${hash2} ./${filenameStandardized}${line.separator}</echo>
+                <echo file="${distChecksumsFile}" append="true">${hash3} ./${filenameStandardized}${line.separator}</echo>
+                <echo file="${distChecksumsFile}" append="true">${hash4} ./${filenameStandardized}${line.separator}</echo>
+            </then>
+        </if>
+    </target>
+
+    <target name="updateset" description="Compares the target and previous file sets to generate the set of updated or new files">
+        <delete dir="${updateSetDirectory}" quiet="true" />
+        <mkdir dir="${updateSetDirectory}" />
+        <foreach param="filename" absparam="absfilename" target="updateset-file">
+            <property name="directory1" value="${distSetSourceDirectory}" />
+            <property name="directory2" value="${previousCleanSourceDirectory}" />
+            <fileset dir="${distSetSourceDirectory}">
+                <include name="**" />
+                <patternset refid="dist_excluded_files" />
+            </fileset>
+        </foreach>
+    </target>
+
+    <target name="updateset-file" hidden="true">
+        <if>
+            <and>
+                <available file="${directory1}/${filename}" type="file" />
+                <available file="${directory2}/${filename}" type="file" />
+            </and>
+            <then>
+                <loadfile file="${directory1}/${filename}" property="file1Content">
+                    <filterchain>
+                        <replaceregexp>
+                            <regexp pattern="\r\n|\r|\n" replace="${line.separator}" multiline="true" />
+                        </replaceregexp>
+                    </filterchain>
+                </loadfile>
+                <loadfile file="${directory2}/${filename}" property="file2Content">
+                    <filterchain>
+                        <replaceregexp>
+                            <regexp pattern="\r\n|\r|\n" replace="${line.separator}" multiline="true" />
+                        </replaceregexp>
+                    </filterchain>
+                </loadfile>
+
+                <if>
+                    <not>
+                        <equals arg1="${file1Content}" arg2="${file2Content}" />
+                    </not>
+                    <then>
+                        <copy file="${absfilename}" tofile="${updateSetDirectory}/${filename}" preservelastmodified="true" />
+                    </then>
+                </if>
+            </then>
+        </if>
+    </target>
+
+    <target name="install-to-updateset-if-chosen" if="${includeInstallInUpdateSet}" hidden="true">
+        <phingcall target="install-to-updateset" />
+    </target>
+
+    <target name="install-to-updateset" description="Copies the install directory from the source set to the update package set">
+        <copy todir="${updateSetDirectory}/${installSubdirectory}">
+            <fileset dir="${sourceDirectory}/${installSubdirectory}">
+                <include name="**" />
+                <patternset refid="dist_excluded_files" />
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="removed-files" description="Generates a list of files removed since the previous file set">
+        <delete file="${distRemovedFilesFile}" quiet="true" />
+        <foreach param="filename" absparam="absfilename" target="removed-files-file">
+            <property name="directory1" value="${previousCleanSourceDirectory}" />
+            <property name="directory2" value="${distSetSourceDirectory}" />
+            <fileset dir="${previousCleanSourceDirectory}">
+                <include name="**" />
+                <patternset refid="dist_excluded_files" />
+            </fileset>
+        </foreach>
+    </target>
+
+    <target name="removed-files-file" hidden="true">
+        <if>
+            <and>
+                <available file="${directory1}/${filename}" type="file" />
+                <not>
+                    <available file="${directory2}/${filename}" type="file" />
+                </not>
+            </and>
+            <then>
+                <if>
+                    <not>
+                        <available file="${distRemovedFilesFile}" type="file" />
+                    </not>
+                    <then>
+                        <echo file="${distRemovedFilesFile}" append="false">Listing removed files for ${targetVersion}${line.separator}${line.separator}</echo>
+                    </then>
+                </if>
+                <echo file="${distRemovedFilesFile}" append="true">${filename}${line.separator}</echo>
+            </then>
+        </if>
+    </target>
+
+    <target name="addendum" description="Copies additional files to the target file set">
+        <copy todir="${distSetDirectory}">
+            <fileset dir="${distAddendumDirectory}">
+                <include name="**" />
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="chmod" description="Applies file permissions to the target set">
+        <chmod file="${distSetSourceDirectory}/inc/settings.php" mode="0666" />
+        <chmod file="${distSetSourceDirectory}/inc/config.default.php" mode="0666" />
+        <chmod file="${distSetSourceDirectory}/cache" mode="0777" />
+        <chmod file="${distSetSourceDirectory}/cache/themes" mode="0777" />
+        <chmod file="${distSetSourceDirectory}/uploads" mode="0777" />
+        <chmod file="${distSetSourceDirectory}/uploads/avatars" mode="0777" />
+    </target>
+
+    <target name="package" description="Creates an archive from the target file set">
+        <delete file="${outputDirectory}/${distSetName}.zip" quiet="true" />
+        <zip destfile="${outputDirectory}/${distSetName}.zip">
+            <fileset dir="${distSetDirectory}">
+                <include name="**" />
+            </fileset>
+        </zip>
+    </target>
+
+    <target name="updateset-package" description="Creates an archive from the update package set">
+        <delete file="${outputDirectory}/${updateSetName}.zip" quiet="true" />
+        <zip destfile="${outputDirectory}/${updateSetName}.zip">
+            <fileset dir="${updateSetDirectory}">
+                <include name="**" />
+            </fileset>
+        </zip>
+    </target>
+
+    <target name="package-hash" description="Creates hashes of the target file set archive">
+        <phingcall target="hash-file">
+            <property name="absfilename" value="${outputDirectory}/${distSetName}.zip" />
+        </phingcall>
+    </target>
+
+    <target name="updateset-package-hash" description="Creates hashes of the update package set archive">
+        <phingcall target="hash-file">
+            <property name="absfilename" value="${outputDirectory}/${updateSetName}.zip" />
+        </phingcall>
+    </target>
+
+    <target name="hash-file" hidden="true">
+        <echo file="${absfilename}.checksums" append="false"></echo>
+        <foreach list="md5,sha1,sha256,sha512" param="algorithm" target="hash-file-algorithm" />
+    </target>
+
+    <target name="hash-file-algorithm" hidden="true">
+        <filehash file="${absfilename}" algorithm="${algorithm}" propertyname="filehashvalue" />
+        <echo file="${absfilename}.checksums" append="true">${algorithm} ${filehashvalue}${line.separator}</echo>
+    </target>
+
+    <target name="package-size" description="Outputs the size of the target file set archive">
+        <phingcall target="file-size">
+            <property name="absfilename" value="${outputDirectory}/${distSetName}.zip" />
+        </phingcall>
+    </target>
+
+    <target name="updateset-package-size" description="Outputs the size of the update package set archive">
+        <phingcall target="file-size">
+            <property name="absfilename" value="${outputDirectory}/${updateSetName}.zip" />
+        </phingcall>
+    </target>
+
+    <target name="file-size" hidden="true">
+        <filesize file="${absfilename}" />
+        <php expression="round(${filesize}/1024/1024,2)" returnProperty="msize" />
+        <echo msg="Filesize is: ${filesize} bytes (${msize} MB)"/>
+    </target>
+</project>
