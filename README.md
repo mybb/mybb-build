@@ -8,6 +8,7 @@ Maintenance repository for security fixes and meta updates.
 - [PHP](https://secure.php.net/) (https://secure.php.net/manual/en/install.php)
 - [PEAR](https://pear2.php.net/) (https://pear.php.net/manual/en/installation.getting.php)
 - [Archive_Tar PEAR package](https://pear.php.net/package/Archive_Tar)
+- [git](https://git-scm.com/)
 - [Phing](https://www.phing.info/) (http://www.phing.info/get/phing-latest.phar)
 
 ### Working directory structure
