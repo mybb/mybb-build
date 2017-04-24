@@ -54,8 +54,8 @@
     <property name="distSetSourceDirectory" value="${distSetDirectory}/${distSetSourceSubdirectory}" />
 
     <!-- group tasks -->
-    <target name="dist-only" description="Executes tasks to build the distribution package" depends="prepare,copy-clean,hardcoded-versions,patch,dist-checksums,addendum,chmod,package,package-hash,package-size" />
-    <target name="full" description="Executes tasks to build both distribution and update packages" depends="prepare,copy-clean,hardcoded-versions,patch,dist-checksums,updateset,install-to-updateset-if-chosen,removed-files,addendum,chmod,package,updateset-package,package-hash,updateset-package-hash,package-size,updateset-package-size" />
+    <target name="dist-only" description="Executes tasks to build the distribution package" depends="prepare,copy-clean,hardcoded-versions,patch,eol,dist-checksums,addendum,chmod,package,package-hash,package-size" />
+    <target name="full" description="Executes tasks to build both distribution and update packages" depends="prepare,copy-clean,hardcoded-versions,patch,eol,dist-checksums,updateset,install-to-updateset-if-chosen,removed-files,addendum,chmod,package,updateset-package,package-hash,updateset-package-hash,package-size,updateset-package-size" />
     <target name="hardcoded-versions" description="Attempts to read the hardcoded versions" depends="version-core,version-englishlang,previous-version-core" />
 
     <!-- build process -->
@@ -111,6 +111,19 @@
                 <include name="**" />
             </fileset>
         </apply>
+    </target>
+
+    <target name="eol" description="Converts line encoding in the target file set">
+        <reflexive>
+            <fileset dir="${distSetSourceDirectory}">
+                <include pattern="**" />
+            </fileset>
+            <filterchain>
+                <replaceregexp>
+                    <regexp pattern="\r(\n)" replace="\1" />
+                </replaceregexp>
+            </filterchain>
+        </reflexive>
     </target>
 
     <target name="dist-checksums" description="Prints target file set checksums for different new line encodings">
