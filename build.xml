@@ -114,16 +114,21 @@
     </target>
 
     <target name="eol" description="Converts line encoding in the target file set">
-        <reflexive>
-            <fileset dir="${distSetSourceDirectory}">
-                <include pattern="**" />
-            </fileset>
-            <filterchain>
-                <replaceregexp>
-                    <regexp pattern="\r(\n)" replace="\1" />
-                </replaceregexp>
-            </filterchain>
-        </reflexive>
+        <foreach param="filename" absparam="absfilename" target="eol-file">
+          <fileset dir="${distSetSourceDirectory}">
+                <include pattern="**/*.html" />
+                <include pattern="**/*.php" />
+                <include pattern="**/*.js" />
+                <type type="file" />
+          </fileset>
+        </foreach>
+    </target>
+
+    <target name="eol-file" hidden="true">
+        <php returnProperty="contentStandardized"><![CDATA[
+            preg_replace("/\r\n|\r/", "\n", file_get_contents('${absfilename}'))
+        ]]></php>
+        <echo file="${absfilename}">${contentStandardized}</echo>
     </target>
 
     <target name="dist-checksums" description="Prints target file set checksums for different new line encodings">
