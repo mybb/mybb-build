@@ -37,7 +37,7 @@
     </patternset>
 
     <!-- internal properties -->
-    <property name="outputDirectory" value="${project.basedir}/build2" />
+    <property name="outputDirectory" value="${project.basedir}/build" />
     <property name="patchDirectory" value="${project.basedir}/patch" />
     <property name="distAddendumDirectory" value="${project.basedir}/dist-addendum" />
 
