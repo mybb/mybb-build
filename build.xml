@@ -36,6 +36,11 @@
         <exclude name="readme.md"></exclude>
     </patternset>
 
+    <!-- files to ignore when creating the update set -->
+    <patternset id="updateset_ignored_changed_files">
+        <exclude name="install/**"></exclude>
+    </patternset>
+
     <!-- internal properties -->
     <property name="outputDirectory" value="${project.basedir}/build" />
     <property name="patchDirectory" value="${project.basedir}/patch" />
@@ -181,39 +186,56 @@
             <fileset dir="${distSetSourceDirectory}">
                 <include name="**" />
                 <patternset refid="dist_excluded_files" />
+                <patternset refid="updateset_ignored_changed_files" />
             </fileset>
         </foreach>
     </target>
 
     <target name="updateset-file" hidden="true">
         <if>
-            <and>
-                <available file="${directory1}/${filename}" type="file" />
-                <available file="${directory2}/${filename}" type="file" />
-            </and>
+            <available file="${directory1}/${filename}" type="file" />
             <then>
-                <loadfile file="${directory1}/${filename}" property="file1Content">
-                    <filterchain>
-                        <replaceregexp>
-                            <regexp pattern="\r\n|\r|\n" replace="${line.separator}" multiline="true" />
-                        </replaceregexp>
-                    </filterchain>
-                </loadfile>
-                <loadfile file="${directory2}/${filename}" property="file2Content">
-                    <filterchain>
-                        <replaceregexp>
-                            <regexp pattern="\r\n|\r|\n" replace="${line.separator}" multiline="true" />
-                        </replaceregexp>
-                    </filterchain>
-                </loadfile>
-
                 <if>
-                    <not>
-                        <equals arg1="${file1Content}" arg2="${file2Content}" />
-                    </not>
+                    <available file="${directory2}/${filename}" type="file" />
                     <then>
-                        <copy file="${absfilename}" tofile="${updateSetDirectory}/${filename}" preservelastmodified="true" />
+                        <loadfile file="${directory1}/${filename}" property="file1Content">
+                            <filterchain>
+                                <replaceregexp>
+                                    <regexp pattern="\r\n|\r|\n" replace="${line.separator}" multiline="true" />
+                                </replaceregexp>
+                            </filterchain>
+                        </loadfile>
+                        <loadfile file="${directory2}/${filename}" property="file2Content">
+                            <filterchain>
+                                <replaceregexp>
+                                    <regexp pattern="\r\n|\r|\n" replace="${line.separator}" multiline="true" />
+                                </replaceregexp>
+                            </filterchain>
+                        </loadfile>
+
+                        <!-- Phing does not set properties with LoadFileTask if content is empty -->
+                        <if>
+                            <or>
+                                <xor>
+                                    <isset property="file1Content" />
+                                    <isset property="file2Content" />
+                                </xor>
+                                <and>
+                                    <isset property="file1Content" />
+                                    <isset property="file2Content" />
+                                    <not>
+                                        <equals arg1="${file1Content}" arg2="${file2Content}" />
+                                    </not>
+                                </and>
+                            </or>
+                            <then>
+                                <copy file="${absfilename}" tofile="${updateSetDirectory}/${filename}" preservelastmodified="true" />
+                            </then>
+                        </if>
                     </then>
+                    <else>
+                        <copy file="${absfilename}" tofile="${updateSetDirectory}/${filename}" preservelastmodified="true" />
+                    </else>
                 </if>
             </then>
         </if>
