@@ -102,6 +102,7 @@
     <target name="patch" description="Applies attached git patches to the target file set">
         <apply executable="git" dir="${distSetSourceDirectory}">
             <arg value="apply" />
+            <arg value="--ignore-whitespace" />
             <fileset dir="${patchDirectory}">
                 <include name="**" />
             </fileset>
@@ -112,6 +113,7 @@
         <apply executable="git" dir="${distSetSourceDirectory}">
             <arg value="apply" />
             <arg value="--reverse" />
+            <arg value="--ignore-whitespace" />
             <fileset dir="${patchDirectory}">
                 <include name="**" />
             </fileset>
