@@ -241,8 +241,13 @@
         </if>
     </target>
 
-    <target name="install-to-updateset-if-chosen" if="${includeInstallInUpdateSet}" hidden="true">
-        <phingcall target="install-to-updateset" />
+    <target name="install-to-updateset-if-chosen" hidden="true">
+        <if>
+            <istrue value="${includeInstallInUpdateSet}" />
+            <then>
+                <phingcall target="install-to-updateset" />
+            </then>
+        </if>
     </target>
 
     <target name="install-to-updateset" description="Copies the install directory from the source set to the update package set">
