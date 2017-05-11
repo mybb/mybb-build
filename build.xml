@@ -254,7 +254,7 @@
 
     <target name="install-to-updateset" description="Copies the install directory from the source set to the update package set">
         <copy todir="${updateSetDirectory}/${installSubdirectory}">
-            <fileset dir="${sourceDirectory}/${installSubdirectory}">
+            <fileset dir="${distSetSourceDirectory}/${installSubdirectory}">
                 <include name="**" />
                 <patternset refid="dist_excluded_files" />
             </fileset>
