@@ -162,7 +162,7 @@
                     md5_file('${absfilename}')
                 ]]></php>
                 <php returnProperty="hash2"><![CDATA[
-                    md5(str_replace(array("r\n", "\r", "\n"), "\r\n", file_get_contents('${absfilename}')))
+                    md5(str_replace(array("\r\n", "\r", "\n"), "\r\n", file_get_contents('${absfilename}')))
                 ]]></php>
                 <php returnProperty="hash3"><![CDATA[
                     md5(str_replace(array("\r\n", "\r"), "\n", file_get_contents('${absfilename}')))
