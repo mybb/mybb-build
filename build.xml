@@ -36,6 +36,20 @@
         <exclude name="readme.md"></exclude>
     </patternset>
 
+    <!-- files with varying EOL encoding -->
+    <selector id="varying_eol_encoding_files">
+        <or>
+            <filename name="**/.htaccess" />
+            <filename name="**/LICENSE" />
+            <filename name="**/*.css" />
+            <filename name="**/*.html" />
+            <filename name="**/*.js" />
+            <filename name="**/*.php" />
+            <filename name="**/*.txt" />
+            <filename name="**/*.xml" />
+        </or>
+    </selector>
+
     <!-- files to ignore when creating the update set -->
     <patternset id="updateset_ignored_changed_files">
         <exclude name="install/**"></exclude>
@@ -123,9 +137,7 @@
     <target name="eol" description="Converts line encoding in the target file set">
         <foreach param="filename" absparam="absfilename" target="eol-file">
           <fileset dir="${distSetSourceDirectory}">
-                <include pattern="**/*.html" />
-                <include pattern="**/*.php" />
-                <include pattern="**/*.js" />
+                <patternset refid="varying_eol_encoding_files" />
                 <type type="file" />
           </fileset>
         </foreach>
@@ -140,15 +152,49 @@
 
     <target name="dist-checksums" description="Prints target file set checksums for different new line encodings">
         <delete file="${distChecksumsFile}" quiet="true" />
-        <foreach param="filename" absparam="absfilename" target="dist-checksums-file">
+
+        <foreach param="filename" absparam="absfilename" target="dist-checksums-file-standard">
           <fileset dir="${distSetSourceDirectory}">
-                <include name="**" />
+                <not>
+                    <selector refid="varying_eol_encoding_files" />
+                </not>
                 <type type="file" />
           </fileset>
         </foreach>
+
+        <foreach param="filename" absparam="absfilename" target="dist-checksums-file-varying-eol-encoding">
+          <fileset dir="${distSetSourceDirectory}">
+                <selector refid="varying_eol_encoding_files" />
+                <type type="file" />
+          </fileset>
+        </foreach>
+
+        <!-- sort by filename -->
+        <php returnProperty="contentOrdered"><![CDATA[
+            $lines = file('${distChecksumsFile}');
+
+            $files = [];
+
+            foreach ($lines as $line) {
+                $values = explode(' ', trim($line));
+                $files[ $values[1] ][] = $values[0];
+            }
+
+            ksort($files);
+
+            $lines = [];
+
+            foreach ($files as $filename => $checksums) {
+                foreach ($checksums as $checksum) {
+                    $lines[] = $checksum . ' ' . $filename;
+                }
+            }
+
+            file_put_contents('${distChecksumsFile}', implode("\n", $lines));
+        ]]></php>
     </target>
 
-    <target name="dist-checksums-file" hidden="true">
+    <target name="dist-checksums-file-standard" hidden="true">
         <if>
             <available file="${absfilename}" type="file" />
             <then>
@@ -161,20 +207,36 @@
                 <php returnProperty="hash"><![CDATA[
                     md5_file('${absfilename}')
                 ]]></php>
-                <php returnProperty="hash2"><![CDATA[
-                    md5(str_replace(array("\r\n", "\r", "\n"), "\r\n", file_get_contents('${absfilename}')))
-                ]]></php>
+
+                <echo file="${distChecksumsFile}" append="true">${hash} ./${filenameStandardized}${line.separator}</echo>
+            </then>
+        </if>
+    </target>
+
+    <target name="dist-checksums-file-varying-eol-encoding" hidden="true">
+        <if>
+            <available file="${absfilename}" type="file" />
+            <then>
+                <php function="str_replace" returnProperty="filenameStandardized">
+                    <param value="\" />
+                    <param value="/" />
+                    <param value="${filename}" />
+                </php>
+
                 <php returnProperty="hash3"><![CDATA[
                     md5(str_replace(array("\r\n", "\r"), "\n", file_get_contents('${absfilename}')))
+                ]]></php>
+                <php returnProperty="hash2"><![CDATA[
+                    md5(str_replace(array("\r\n", "\r", "\n"), "\r\n", file_get_contents('${absfilename}')))
                 ]]></php>
                 <php returnProperty="hash4"><![CDATA[
                     md5(str_replace(array("\r\n", "\n"), "\r", file_get_contents('${absfilename}')))
                 ]]></php>
 
-                <echo file="${distChecksumsFile}" append="true">${hash} ./${filenameStandardized}${line.separator}</echo>
                 <echo file="${distChecksumsFile}" append="true">${hash2} ./${filenameStandardized}${line.separator}</echo>
                 <echo file="${distChecksumsFile}" append="true">${hash3} ./${filenameStandardized}${line.separator}</echo>
                 <echo file="${distChecksumsFile}" append="true">${hash4} ./${filenameStandardized}${line.separator}</echo>
+
             </then>
         </if>
     </target>
