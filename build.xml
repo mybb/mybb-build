@@ -13,6 +13,7 @@
 
     <property name="classCoreVersionRegex">public \$version = "([0-9a-zA-Z.-]+)";</property>
     <property name="englishManifestVersionRegex">\$langinfo\['version'\] = "([0-9a-zA-Z.-]+)";</property>
+    <property name="masterThemeManifestVersionRegex"><![CDATA[<theme name="MyBB Master Style" version="([0-9a-zA-Z.-]+)">]]></property>
 
     <!-- file structure settings -->
     <property name="distSetPrefix" value="mybb_" />
@@ -75,7 +76,7 @@
     <!-- group tasks -->
     <target name="dist-only" description="Executes tasks to build the distribution package" depends="prepare,copy-clean,hardcoded-versions,patch,eol,dist-checksums,addendum,chmod,package,package-hash,package-size" />
     <target name="full" description="Executes tasks to build both distribution and update packages" depends="prepare,copy-clean,hardcoded-versions,patch,eol,dist-checksums,updateset,install-to-updateset-if-chosen,removed-files,addendum,chmod,package,updateset-package,package-hash,updateset-package-hash,package-size,updateset-package-size" />
-    <target name="hardcoded-versions" description="Attempts to read the hardcoded versions" depends="version-core,version-englishlang,previous-version-core" />
+    <target name="hardcoded-versions" description="Attempts to read the hardcoded versions" depends="version-core,version-englishlang,version-theme,previous-version-core" />
 
     <!-- build process -->
     <target name="prepare" description="Creates an empty directory for output files">
@@ -105,6 +106,12 @@
         <loadfile property="content" file="${distSetSourceDirectory}/inc/languages/english.php" />
         <propertyregex property="version" subject="${content}" pattern="${englishManifestVersionRegex}" match="$1" defaultValue="Not found" />
         <echo message="Version in inc/languages/english.php: ${version}" />
+    </target>
+
+    <target name="version-theme" description="Attempts to read the version hardcoded in MyBB Master Style manifest file">
+        <loadfile property="content" file="${distSetSourceDirectory}/install/resources/mybb_theme.xml" />
+        <propertyregex property="version" subject="${content}" pattern="${masterThemeManifestVersionRegex}" match="$1" defaultValue="Not found" />
+        <echo message="Version in install/resources/mybb_theme.xml: ${version}" />
     </target>
 
     <target name="previous-version-core" description="Attempts to read the previous set's version hardcoded in the MyBB class">
