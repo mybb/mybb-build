@@ -144,7 +144,7 @@
     <target name="eol" description="Converts line encoding in the target file set">
         <foreach param="filename" absparam="absfilename" target="eol-file">
           <fileset dir="${distSetSourceDirectory}">
-                <patternset refid="varying_eol_encoding_files" />
+                <selector refid="varying_eol_encoding_files" />
                 <type type="file" />
           </fileset>
         </foreach>
