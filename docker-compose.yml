@@ -1,0 +1,12 @@
+version: "3.2"
+
+services:
+    phing-service:
+        image: mybb-build
+        build:
+            context: .
+        volumes:
+            - ./sources:/home/user/sources/:ro
+            - type: bind
+              source: ./build
+              target: /home/user/build/

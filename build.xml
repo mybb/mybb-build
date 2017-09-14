@@ -2,10 +2,13 @@
 
 <project name="MyBB" default="full" basedir=".">
     <!-- build settings -->
-    <property file="build.properties" />
+    <property file="${project.basedir}/sources/build.properties" />
 
-    <property name="sourceDirectory" value="${project.basedir}/raw-source" />
-    <property name="previousCleanSourceDirectory" value="${project.basedir}/previous-clean-source" />
+    <property name="sourceDirectory" value="${project.basedir}/sources/raw-source" />
+    <property name="previousCleanSourceDirectory" value="${project.basedir}/sources/previous-clean-source" />
+    <property name="patchDirectory" value="${project.basedir}/sources/patch" />
+    <property name="distAddendumDirectory" value="${project.basedir}/sources/dist-addendum" />
+    <property name="outputDirectory" value="${project.basedir}/build" />
 
     <!-- project settings -->
     <property name="distSetSourceSubdirectory" value="Upload" />
@@ -57,10 +60,6 @@
     </patternset>
 
     <!-- internal properties -->
-    <property name="outputDirectory" value="${project.basedir}/build" />
-    <property name="patchDirectory" value="${project.basedir}/patch" />
-    <property name="distAddendumDirectory" value="${project.basedir}/dist-addendum" />
-
     <propertyregex property="targetVersionCode" subject="${targetVersion}" pattern="[^0-9a-z]" replace="" match="$1" defaultValue="targetversion" />
 
     <property name="distSetName" value="${distSetPrefix}${targetVersionCode}" />
