@@ -7,7 +7,6 @@ RUN apt-get -qq autoclean && apt-get -qq update
 RUN apt-get -qq install software-properties-common python3-software-properties git unzip wget 
 
 # Add repositories
-#RUN LC_ALL=C.UTF-8 add-apt-repository -qq ppa:ondrej/php
 RUN apt-get -qq install apt-transport-https lsb-release ca-certificates && \
     wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg && \
     sh -c 'echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list'
