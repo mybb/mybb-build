@@ -47,5 +47,6 @@ The above example will run the `phing-service` with volumes `sources/` (read-onl
 #### VirtualBox Shared Folders on Windows hosts
 On Windows-based hosts it may be necessary to add the directory in the Docker Machine's **Settings → Shared Folders** (e.g. `d:\mybb-build` named `d/mybb-build`) and manually mount the VirtualBox Shared Folders filesystem (`vboxsf`) to the `default` machine:
 ```
-$ docker-machine ssh default 'sudo mount --types vboxsf d/mybb-build //d/mybb-build'
+$ docker-machine ssh default 'sudo mount -t vboxsf d/mybb-build //d/mybb-build'
+$ docker-machine restart
 ```
