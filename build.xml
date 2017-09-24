@@ -73,8 +73,8 @@
     <property name="distSetSourceDirectory" value="${distSetDirectory}/${distSetSourceSubdirectory}" />
 
     <!-- group tasks -->
-    <target name="dist-only" description="Executes tasks to build the distribution package" depends="prepare,copy-clean,hardcoded-versions,patch,eol,dist-checksums,addendum,chmod,package,package-hash,package-size" />
-    <target name="full" description="Executes tasks to build both distribution and update packages" depends="prepare,copy-clean,hardcoded-versions,patch,eol,dist-checksums,updateset,install-to-updateset-if-chosen,removed-files,addendum,chmod,package,updateset-package,package-hash,updateset-package-hash,package-size,updateset-package-size" />
+    <target name="dist-set" description="Executes tasks to build the distribution package" depends="prepare,copy-clean,hardcoded-versions,patch,eol,addendum,chmod,dates,dist-checksums,package,package-hash,package-size" />
+    <target name="full" description="Executes tasks to build both distribution and update packages" depends="prepare,copy-clean,hardcoded-versions,patch,eol,addendum,chmod,updateset,install-to-updateset-if-chosen,removed-files,dates,dist-checksums,package,updateset-package,package-hash,updateset-package-hash,package-size,updateset-package-size" />
     <target name="hardcoded-versions" description="Attempts to read the hardcoded versions" depends="version-core,version-englishlang,version-theme,previous-version-core" />
 
     <!-- build process -->
@@ -87,7 +87,7 @@
         <mkdir dir="${distSetDirectory}" />
         <mkdir dir="${distSetSourceDirectory}" />
 
-        <copy todir="${distSetSourceDirectory}">
+        <copy todir="${distSetSourceDirectory}" preservelastmodified="true">
             <fileset dir="${sourceDirectory}">
                 <include name="**" />
                 <patternset refid="dist_excluded_files" />
@@ -154,6 +154,25 @@
             preg_replace("/\r\n|\r/", "\n", file_get_contents('${absfilename}'))
         ]]></php>
         <echo file="${absfilename}">${contentStandardized}</echo>
+    </target>
+
+    <target name="dates" description="Sets file modification times to a predefined date">
+        <php function="strtotime" returnProperty="packageDateTimestamp">
+            <param value="${packageDate}" />
+        </php>
+
+        <touch millis="${packageDateTimestamp}">
+          <fileset dir="${distSetDirectory}">
+                <include name="*" />
+                <include name="**" />
+          </fileset>
+        </touch>
+        <touch millis="${packageDateTimestamp}">
+          <fileset dir="${updateSetDirectory}">
+                <include name="*" />
+                <include name="**" />
+          </fileset>
+        </touch>
     </target>
 
     <target name="dist-checksums" description="Prints target file set checksums for different new line encodings">
@@ -321,7 +340,7 @@
     </target>
 
     <target name="install-to-updateset" description="Copies the install directory from the source set to the update package set">
-        <copy todir="${updateSetDirectory}/${installSubdirectory}">
+        <copy todir="${updateSetDirectory}/${installSubdirectory}" preservelastmodified="true">
             <fileset dir="${distSetSourceDirectory}/${installSubdirectory}">
                 <include name="**" />
                 <patternset refid="dist_excluded_files" />
@@ -364,7 +383,7 @@
     </target>
 
     <target name="addendum" description="Copies additional files to the target file set">
-        <copy todir="${distSetDirectory}">
+        <copy todir="${distSetDirectory}" preservelastmodified="true">
             <fileset dir="${distAddendumDirectory}">
                 <include name="**" />
             </fileset>
