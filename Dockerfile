@@ -4,7 +4,7 @@ FROM debian:stretch-slim
 RUN apt-get -qq autoclean && apt-get -qq update
 
 # Install core packages
-RUN apt-get -qq install software-properties-common python3-software-properties git unzip wget 
+RUN apt-get -qq install software-properties-common python3-software-properties git unzip wget strip-nondeterminism
 
 # Add repositories
 RUN apt-get -qq install apt-transport-https lsb-release ca-certificates && \

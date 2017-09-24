@@ -7,6 +7,4 @@ services:
             context: .
         volumes:
             - ./sources:/home/user/sources/:ro
-            - type: bind
-              source: ./build
-              target: /home/user/build/
+            - ./output:/home/user/output/

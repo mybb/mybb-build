@@ -18,7 +18,7 @@ The MyBB package build script.
 - `sources/build.properties` - variables specific to the target release,
 - `build.xml` - project-specific Phing package building instructions.
 
-After Phing is run the output files are located in the `build/` directory.
+After Phing is run the build files are located in the `build/` directory. Output packages and metadata are copied to `output/`.
 
 ### Package building
 You can execute Phing with `php phing-latest.phar`.
@@ -29,7 +29,7 @@ Take a look into `build.xml` to get familiar wit the build process and task (`<t
 
 Before running the tasks remove PHP's memory limit, or increase it to ~1G.
 
-## Docker
+# Docker
 It is possible to run the build script with [Docker](https://www.docker.com/) and have it set up dependencies automatically.
 
 Fetch the repository and place source files according to the description above and build the Docker service from the directory:
@@ -50,3 +50,6 @@ On Windows-based hosts it may be necessary to add the directory in the Docker Ma
 $ docker-machine ssh default 'sudo mount -t vboxsf d/mybb-build //d/mybb-build'
 $ docker-machine restart
 ```
+
+#### Docker Machine memory
+It might be necessary to increase the available memory of the Docker Machine above 1 GB for internal `exec()` calls to run successfully.

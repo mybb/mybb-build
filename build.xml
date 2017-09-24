@@ -8,7 +8,8 @@
     <property name="previousCleanSourceDirectory" value="${project.basedir}/sources/previous-clean-source" />
     <property name="patchDirectory" value="${project.basedir}/sources/patch" />
     <property name="distAddendumDirectory" value="${project.basedir}/sources/dist-addendum" />
-    <property name="outputDirectory" value="${project.basedir}/build" />
+    <property name="buildDirectory" value="${project.basedir}/build" />
+    <property name="outputDirectory" value="${project.basedir}/output" />
 
     <!-- project settings -->
     <property name="distSetSourceSubdirectory" value="Upload" />
@@ -65,22 +66,22 @@
     <property name="distSetName" value="${distSetPrefix}${targetVersionCode}" />
     <property name="updateSetName" value="${updateSetPrefix}${targetVersionCode}" />
 
-    <property name="distSetDirectory" value="${outputDirectory}/${distSetName}" />
-    <property name="updateSetDirectory" value="${outputDirectory}/${updateSetName}" />
-    <property name="distChecksumsFile" value="${outputDirectory}/${distChecksumsFilePrefix}${distSetName}" />
-    <property name="distRemovedFilesFile" value="${outputDirectory}/${distRemovedFilesFilePrefix}${targetVersionCode}" />
+    <property name="distSetDirectory" value="${buildDirectory}/${distSetName}" />
+    <property name="updateSetDirectory" value="${buildDirectory}/${updateSetName}" />
+    <property name="distChecksumsFile" value="${buildDirectory}/${distChecksumsFilePrefix}${distSetName}" />
+    <property name="distRemovedFilesFile" value="${buildDirectory}/${distRemovedFilesFilePrefix}${targetVersionCode}" />
 
     <property name="distSetSourceDirectory" value="${distSetDirectory}/${distSetSourceSubdirectory}" />
 
     <!-- group tasks -->
-    <target name="dist-set" description="Executes tasks to build the distribution package" depends="prepare,copy-clean,hardcoded-versions,patch,eol,addendum,chmod,dates,dist-checksums,package,package-hash,package-size" />
-    <target name="full" description="Executes tasks to build both distribution and update packages" depends="prepare,copy-clean,hardcoded-versions,patch,eol,addendum,chmod,updateset,install-to-updateset-if-chosen,removed-files,dates,dist-checksums,package,updateset-package,package-hash,updateset-package-hash,package-size,updateset-package-size" />
+    <target name="dist-set" description="Executes tasks to build the distribution package" depends="prepare,copy-clean,hardcoded-versions,patch,eol,addendum,chmod,dist-checksums,package,package-determinism,package-hash,package-size,output" />
+    <target name="full" description="Executes tasks to build both distribution and update packages" depends="prepare,copy-clean,hardcoded-versions,patch,eol,addendum,chmod,updateset,install-to-updateset-if-chosen,removed-files,dist-checksums,package,updateset-package,package-determinism,updateset-package-determinism,package-hash,updateset-package-hash,package-size,updateset-package-size,output" />
     <target name="hardcoded-versions" description="Attempts to read the hardcoded versions" depends="version-core,version-englishlang,version-theme,previous-version-core" />
 
     <!-- build process -->
-    <target name="prepare" description="Creates an empty directory for output files">
-        <delete dir="${outputDirectory}" quiet="true" />
-        <mkdir dir="${outputDirectory}" />
+    <target name="prepare" description="Creates an empty directory for build files">
+        <delete dir="${buildDirectory}" quiet="true" />
+        <mkdir dir="${buildDirectory}" />
     </target>
 
     <target name="copy-clean" description="Copies files intended for distribution sets">
@@ -400,8 +401,8 @@
     </target>
 
     <target name="package" description="Creates an archive from the target file set">
-        <delete file="${outputDirectory}/${distSetName}.zip" quiet="true" />
-        <zip destfile="${outputDirectory}/${distSetName}.zip">
+        <delete file="${buildDirectory}/${distSetName}.zip" quiet="true" />
+        <zip destfile="${buildDirectory}/${distSetName}.zip">
             <fileset dir="${distSetDirectory}">
                 <include name="**" />
             </fileset>
@@ -409,23 +410,39 @@
     </target>
 
     <target name="updateset-package" description="Creates an archive from the update package set">
-        <delete file="${outputDirectory}/${updateSetName}.zip" quiet="true" />
-        <zip destfile="${outputDirectory}/${updateSetName}.zip">
+        <delete file="${buildDirectory}/${updateSetName}.zip" quiet="true" />
+        <zip destfile="${buildDirectory}/${updateSetName}.zip">
             <fileset dir="${updateSetDirectory}">
                 <include name="**" />
             </fileset>
         </zip>
     </target>
 
+    <target name="package-determinism" description="Strips non-deterministic information from the package archive">
+        <php function="strtotime" returnProperty="packageDateTimestamp">
+            <param value="${packageDate}" />
+        </php>
+
+        <exec command="strip-nondeterminism --timestamp ${packageDateTimestamp} ${buildDirectory}/${distSetName}.zip" checkreturn="true" />
+    </target>
+
+    <target name="updateset-package-determinism" description="Strips non-deterministic information from the update set package archive">
+        <php function="strtotime" returnProperty="packageDateTimestamp">
+            <param value="${packageDate}" />
+        </php>
+
+        <exec command="strip-nondeterminism --timestamp ${packageDateTimestamp} ${buildDirectory}/${updateSetName}.zip" checkreturn="true" />
+    </target>
+
     <target name="package-hash" description="Creates hashes of the target file set archive">
         <phingcall target="hash-file">
-            <property name="absfilename" value="${outputDirectory}/${distSetName}.zip" />
+            <property name="absfilename" value="${buildDirectory}/${distSetName}.zip" />
         </phingcall>
     </target>
 
     <target name="updateset-package-hash" description="Creates hashes of the update package set archive">
         <phingcall target="hash-file">
-            <property name="absfilename" value="${outputDirectory}/${updateSetName}.zip" />
+            <property name="absfilename" value="${buildDirectory}/${updateSetName}.zip" />
         </phingcall>
     </target>
 
@@ -441,13 +458,13 @@
 
     <target name="package-size" description="Outputs the size of the target file set archive">
         <phingcall target="file-size">
-            <property name="absfilename" value="${outputDirectory}/${distSetName}.zip" />
+            <property name="absfilename" value="${buildDirectory}/${distSetName}.zip" />
         </phingcall>
     </target>
 
     <target name="updateset-package-size" description="Outputs the size of the update package set archive">
         <phingcall target="file-size">
-            <property name="absfilename" value="${outputDirectory}/${updateSetName}.zip" />
+            <property name="absfilename" value="${buildDirectory}/${updateSetName}.zip" />
         </phingcall>
     </target>
 
@@ -455,5 +472,17 @@
         <filesize file="${absfilename}" />
         <php expression="round(${filesize}/1024/1024,2)" returnProperty="msize" />
         <echo msg="Filesize is: ${filesize} bytes (${msize} MB)"/>
+    </target>
+
+    <target name="output" description="Copies the build packages and metadata to the output directory">
+        <delete dir="${outputDirectory}" quiet="true" />
+        <mkdir dir="${outputDirectory}" />
+
+        <copy todir="${outputDirectory}" preservelastmodified="true">
+            <fileset dir="${buildDirectory}">
+                <include name="*" />
+                <type type="file" />
+            </fileset>
+        </copy>
     </target>
 </project>
