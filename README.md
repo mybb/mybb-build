@@ -8,6 +8,7 @@ The MyBB package build script.
 - [PHP](https://secure.php.net/) (https://secure.php.net/manual/en/install.php)
 - [Archive_Tar PEAR package](https://pear.php.net/package/Archive_Tar)
 - [git](https://git-scm.com/)
+- [strip-nondeterminism](https://packages.debian.org/sid/strip-nondeterminism)
 - [Phing](https://www.phing.info/) (http://www.phing.info/get/phing-latest.phar)
 
 ### Working directory structure
