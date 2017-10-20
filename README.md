@@ -28,7 +28,7 @@ You can display Phing help with `-help` and list the build task names and descri
 
 Take a look into `build.xml` to get familiar wit the build process and task (`<target>`) order.
 
-Before running the tasks remove PHP's memory limit, or increase it to ~1G.
+It is recommended to run the tools with at least 2048 MB of memory available to PHP and external tools.
 
 # Docker
 It is possible to run the build script with [Docker](https://www.docker.com/) and have it set up dependencies automatically.
