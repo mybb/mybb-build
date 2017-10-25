@@ -28,7 +28,7 @@ You can display Phing help with `-help` and list the build task names and descri
 
 Take a look into `build.xml` to get familiar wit the build process and task (`<target>`) order.
 
-It is recommended to run the tools with at least 2048 MB of memory available to PHP and external tools.
+**It is recommended to run the tools with at least 2048 MB of memory available to PHP and external tools.**
 
 # Docker
 It is possible to run the build script with [Docker](https://www.docker.com/) and have it set up dependencies automatically.
@@ -51,6 +51,3 @@ On Windows-based hosts it may be necessary to add the directory in the Docker Ma
 $ docker-machine ssh default 'sudo mount -t vboxsf d/mybb-build //d/mybb-build'
 $ docker-machine restart
 ```
-
-#### Docker Machine memory
-It might be necessary to increase the available memory of the Docker Machine above 1 GB for internal `exec()` calls to run successfully.
