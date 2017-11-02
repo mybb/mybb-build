@@ -30,6 +30,7 @@
     <property name="distRemovedFilesFilePrefix" value="removed_files_list_" />
     <property name="distChangedTemplatesFilePrefix" value="changed_templates_list_" />
     <property name="distPluginHooksFilePrefix" value="18_plugin_hooks" />
+    <property name="updateSetLanguageFilesDirectory" value="inc/languages/english/" />
 
     <!-- files to exclude when copying files for distribution packages -->
     <patternset id="dist_excluded_files">
@@ -679,6 +680,27 @@ YML;
                 }
             }
 
+            // changed language files YML
+            $realpath = realpath('${updateSetDirectory}/${updateSetLanguageFilesDirectory}');
+
+            $count = 0;
+
+            $RecursiveDirectoryIterator = new RecursiveDirectoryIterator($realpath);
+            $RecursiveIteratorIterator = new RecursiveIteratorIterator($RecursiveDirectoryIterator);
+
+            foreach ($RecursiveIteratorIterator as $path) {
+                if (is_file($path)) {
+                    $count++;
+                }
+            }
+
+            if ($count) {
+                $changedLanguageFilesNumberYml = <<<YML
+changed_language_files_number: "{$count}"
+
+YML;
+            }
+
             // packages YML
             $distSetPackageSize = round(filesize('${buildDirectory}/${distSetName}.zip') / 1024 / 1024, 2);
             $updateSetPackageSize = round(filesize('${buildDirectory}/${updateSetName}.zip') / 1024 / 1024, 2);
@@ -738,7 +760,7 @@ packages:
         filesize: "{$updateSetPackageSize} MB"
         checksums:
 {$updateSetPackageChecksumsYml}
-{$changedFilesYml}{$changedTemplatesYml}
+{$changedLanguageFilesNumberYml}{$changedFilesYml}{$changedTemplatesYml}
 ---
 YML;
 
