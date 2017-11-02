@@ -12,18 +12,24 @@
     <property name="outputDirectory" value="${project.basedir}/output" />
 
     <!-- project settings -->
+    <propertyregex property="targetVersionCode" subject="${targetVersion}" pattern="[^0-9a-z]" replace="" match="$1" defaultValue="$0" />
+
     <property name="distSetSourceSubdirectory" value="Upload" />
     <property name="installSubdirectory" value="install" />
 
     <property name="classCoreVersionRegex">public \$version = "([0-9a-zA-Z.-]+)";</property>
     <property name="englishManifestVersionRegex">\$langinfo\['version'\] = "([0-9a-zA-Z.-]+)";</property>
     <property name="masterThemeManifestVersionRegex"><![CDATA[<theme name="MyBB Master Style" version="([0-9a-zA-Z.-]+)">]]></property>
+    <property name="changedTemplatesRegex"><![CDATA[<template name="()" version="${targetVersionCode}">]]></property>
 
     <!-- file structure settings -->
     <property name="distSetPrefix" value="mybb_" />
     <property name="updateSetPrefix" value="changed_files_" />
     <property name="distChecksumsFilePrefix" value="checksums_" />
-    <property name="distRemovedFilesFilePrefix" value="removed_files_" />
+    <property name="distChangedFilesFilePrefix" value="changed_files_list_" />
+    <property name="distRemovedFilesFilePrefix" value="removed_files_list_" />
+    <property name="distChangedTemplatesFilePrefix" value="changed_templates_list_" />
+    <property name="distPluginHooksFilePrefix" value="18_plugin_hooks" />
 
     <!-- files to exclude when copying files for distribution packages -->
     <patternset id="dist_excluded_files">
@@ -57,25 +63,27 @@
 
     <!-- files to ignore when creating the update set -->
     <patternset id="updateset_ignored_changed_files">
-        <exclude name="install/**"></exclude>
+        <!--<exclude name="install/**"></exclude>-->
     </patternset>
 
     <!-- internal properties -->
-    <propertyregex property="targetVersionCode" subject="${targetVersion}" pattern="[^0-9a-z]" replace="" match="$1" defaultValue="targetversion" />
-
     <property name="distSetName" value="${distSetPrefix}${targetVersionCode}" />
     <property name="updateSetName" value="${updateSetPrefix}${targetVersionCode}" />
 
     <property name="distSetDirectory" value="${buildDirectory}/${distSetName}" />
     <property name="updateSetDirectory" value="${buildDirectory}/${updateSetName}" />
     <property name="distChecksumsFile" value="${buildDirectory}/${distChecksumsFilePrefix}${distSetName}" />
+    <property name="distChangedFilesFile" value="${buildDirectory}/${distChangedFilesFilePrefix}${targetVersionCode}" />
     <property name="distRemovedFilesFile" value="${buildDirectory}/${distRemovedFilesFilePrefix}${targetVersionCode}" />
+    <property name="distChangedTemplatesFile" value="${buildDirectory}/${distChangedTemplatesFilePrefix}${targetVersionCode}" />
+    <property name="distPluginHooksFile" value="${buildDirectory}/${distPluginHooksFilePrefix}.yml" />
+    <property name="distVersionDataFile" value="${buildDirectory}/${targetVersion}.md" />
 
     <property name="distSetSourceDirectory" value="${distSetDirectory}/${distSetSourceSubdirectory}" />
 
     <!-- group tasks -->
-    <target name="dist-set" description="Executes tasks to build the distribution package" depends="prepare,copy-clean,hardcoded-versions,patch,eol,addendum,chmod,dist-checksums,package,package-determinism,package-hash,package-size,output" />
-    <target name="full" description="Executes tasks to build both distribution and update packages" depends="prepare,copy-clean,hardcoded-versions,patch,eol,addendum,chmod,updateset,install-to-updateset-if-chosen,removed-files,dist-checksums,package,updateset-package,package-determinism,updateset-package-determinism,package-hash,updateset-package-hash,package-size,updateset-package-size,output" />
+    <target name="dist-set" description="Executes tasks to build the distribution package" depends="prepare,copy-clean,hardcoded-versions,patch,eol,plugin-hooks,addendum,chmod,dist-checksums,package,package-determinism,package-hash,version-data,output" />
+    <target name="full" description="Executes tasks to build both distribution and update packages" depends="prepare,copy-clean,hardcoded-versions,patch,eol,plugin-hooks,addendum,chmod,updateset,changed-files,install-to-updateset-if-chosen,removed-files,changed-templates,dist-checksums,package,updateset-package,package-determinism,updateset-package-determinism,package-hash,updateset-package-hash,version-data,output" />
     <target name="hardcoded-versions" description="Attempts to read the hardcoded versions" depends="version-core,version-englishlang,version-theme,previous-version-core" />
 
     <!-- build process -->
@@ -331,6 +339,31 @@
         </if>
     </target>
 
+    <target name="changed-files" description="Generates a list of files in the update package set">
+        <delete file="${distChangedFilesFile}" quiet="true" />
+        <php><![CDATA[
+            $fileList = [];
+
+            $realpath = realpath('${updateSetDirectory}');
+
+            $RecursiveDirectoryIterator = new RecursiveDirectoryIterator($realpath);
+            $RecursiveIteratorIterator = new RecursiveIteratorIterator($RecursiveDirectoryIterator);
+
+            foreach ($RecursiveIteratorIterator as $path) {
+                if (is_file($path)) {
+                    $pathNormalized = str_replace($realpath . DIRECTORY_SEPARATOR, null, $path);
+                    $pathNormalized = str_replace('\\', '/', $pathNormalized);
+
+                    $fileList[] = $pathNormalized;
+                }
+            }
+
+            if ($fileList) {
+                file_put_contents('${distChangedFilesFile}', implode("\n", $fileList));
+            }
+        ]]></php>
+    </target>
+
     <target name="install-to-updateset-if-chosen" hidden="true">
         <if>
             <istrue value="${includeInstallInUpdateSet}" />
@@ -381,6 +414,121 @@
                 <echo file="${distRemovedFilesFile}" append="true">${filename}${line.separator}</echo>
             </then>
         </if>
+    </target>
+
+    <target name="changed-templates" description="Generates a list of templates set to the target version">
+        <delete file="${distChangedTemplatesFile}" quiet="true" />
+        <php><![CDATA[
+            $templateNames = [];
+
+            $xml = simplexml_load_file('${distSetSourceDirectory}/install/resources/mybb_theme.xml');
+
+            foreach ($xml->templates[0]->template as $element) {
+                $version = (string)$element->attributes()['version'];
+
+                if ($version == '${targetVersionCode}') {
+                    $name = $element->attributes()['name'];
+                    $templateNames[] = (string)$name;
+                }
+            }
+
+            natsort($templateNames);
+
+            if ($templateNames) {
+                file_put_contents('${distChangedTemplatesFile}', implode("\n", $templateNames));
+            }
+        ]]></php>
+    </target>
+
+    <target name="plugin-hooks" description="Generates a list of plugin hooks basing on the target file set">
+        <delete file="${distPluginHooksFile}" quiet="true" />
+        <php><![CDATA[
+            $hooks = [];
+
+            $realpath = realpath('${distSetSourceDirectory}');
+
+            $pattern = '/\$plugins->run_hooks\((\'|")(?<name>[a-zA-Z0-9_]+)\1(?:, ?(?<parameters>[^)]*))*\)/';
+
+            $RecursiveDirectoryIterator = new RecursiveDirectoryIterator($realpath);
+            $RecursiveIteratorIterator = new RecursiveIteratorIterator($RecursiveDirectoryIterator);
+
+            foreach ($RecursiveIteratorIterator as $path) {
+                if (is_file($path) && pathinfo($path, PATHINFO_EXTENSION) == 'php') {
+                    $pathNormalized = str_replace($realpath . DIRECTORY_SEPARATOR, null, $path);
+                    $pathNormalized = str_replace('\\', '/', $pathNormalized);
+
+                    $fileHandle = fopen($path, 'r');
+
+                    if ($fileHandle) {
+                        $lineNumber = 0;
+
+                        while (($lineContent = fgets($fileHandle, 4096)) !== false) {
+                            $lineNumber++;
+
+                            $result = preg_match($pattern, $lineContent, $matches);
+
+                            if ($result) {
+                                if (isset($matches['parameters'])) {
+                                    $parameters = explode(',', $matches['parameters']);
+
+                                    array_walk($parameters, 'trim');
+                                } else {
+                                    $parameters = [];
+                                }
+
+                                $hooks[] = [
+                                    'name' => $matches['name'],
+                                    'file' => $pathNormalized,
+                                    'line' => $lineNumber,
+                                    'parameters' => $parameters,
+                                ];
+                            }
+                        }
+
+                        fclose($fileHandle);
+                    }
+                }
+            }
+
+            $hooksYml = <<<YML
+hooks:
+
+YML;
+
+            foreach ($hooks as $hook) {
+                if ($hook['parameters']) {
+                    $parametersYml = <<<YML
+    parameters:
+
+YML;
+
+                    foreach ($hook['parameters'] as $paramater) {
+                        $parameterEscaped = addcslashes($paramater, '"');
+
+                        $parametersYml .= <<<YML
+      - "{$parameterEscaped}"
+
+YML;
+                    }
+                } else {
+                    $parametersYml = '';
+                }
+
+                $hooksYml .= <<<YML
+  - name: {$hook['name']}
+    file: {$hook['file']}
+    line: {$hook['line']}
+{$parametersYml}
+YML;
+            }
+
+            $yml = <<<YML
+version_code: ${targetVersionCode}
+{$hooksYml}
+YML;
+
+            file_put_contents('${distPluginHooksFile}', $yml);
+        ]]></php>
     </target>
 
     <target name="addendum" description="Copies additional files to the target file set">
@@ -456,22 +604,146 @@
         <echo file="${absfilename}.checksums" append="true">${algorithm} ${filehashvalue}${line.separator}</echo>
     </target>
 
-    <target name="package-size" description="Outputs the size of the target file set archive">
-        <phingcall target="file-size">
-            <property name="absfilename" value="${buildDirectory}/${distSetName}.zip" />
-        </phingcall>
-    </target>
+    <target name="version-data" description="Generates a YAML data file for the target version">
+        <delete file="${distVersionDataFile}" quiet="true" />
+        <php><![CDATA[
+            $changedFilesFile = '${distChangedFilesFile}';
+            $changedTemplatesFile = '${distChangedTemplatesFile}';
 
-    <target name="updateset-package-size" description="Outputs the size of the update package set archive">
-        <phingcall target="file-size">
-            <property name="absfilename" value="${buildDirectory}/${updateSetName}.zip" />
-        </phingcall>
-    </target>
+            // changed files YML
+            $changedFilesYml = null;
 
-    <target name="file-size" hidden="true">
-        <filesize file="${absfilename}" />
-        <php expression="round(${filesize}/1024/1024,2)" returnProperty="msize" />
-        <echo msg="Filesize is: ${filesize} bytes (${msize} MB)"/>
+            if (file_exists($changedFilesFile)) {
+                $changedFiles = file($changedFilesFile);
+
+                $changedFilesArray = [];
+
+                foreach ($changedFiles as $path) {
+                    $parents = explode('/', $path);
+                    $file = trim(array_pop($parents));
+
+                    $immediateParent = &$changedFilesArray;
+                    foreach ($parents as $parent) {
+                        $immediateParent = &$immediateParent[$parent];
+                    }
+
+                    $immediateParent[] = $file;
+                }
+
+                $changedFilesYml = <<<YML
+
+changed_files:
+
+YML;
+
+                function arrayToYml($array, $level = 1)
+                {
+                    $output = null;
+
+                    foreach ($array as $key => $value) {
+                        $output .= str_repeat('  ', $level) . '- ';
+
+                        if (is_array($value)) {
+                            $output .= $key . ":\n";
+                            $output .= arrayToYml($value, $level + 1);
+                        } else {
+                            $output .= $value . "\n";
+                        }
+                    }
+
+                    return $output;
+                }
+
+                $changedFilesYml .= arrayToYml($changedFilesArray);
+            }
+
+            // changed templates YML
+            $changedTemplatesYml = null;
+
+            if (file_exists($changedTemplatesFile)) {
+                $changedTemplates = file($changedTemplatesFile);
+
+                $changedTemplatesYml = <<<YML
+
+changed_templates:
+
+YML;
+
+                foreach ($changedTemplates as $value) {
+                    $value = trim($value);
+
+                    $changedTemplatesYml .= <<<YML
+  - {$value}
+
+YML;
+                }
+            }
+
+            // packages YML
+            $distSetPackageSize = round(filesize('${buildDirectory}/${distSetName}.zip') / 1024 / 1024, 2);
+            $updateSetPackageSize = round(filesize('${buildDirectory}/${updateSetName}.zip') / 1024 / 1024, 2);
+
+            $distSetPackageChecksumsYml = null;
+
+            $lines = file('${buildDirectory}/${distSetName}.zip.checksums');
+
+            foreach ($lines as $line) {
+                $line = trim($line);
+
+                if ($line) {
+                    $data = explode(' ', $line);
+                    $distSetPackageChecksumsYml .= <<<YML
+          - type: {$data[0]}
+            value: {$data[1]}
+
+YML;
+                }
+            }
+
+            $updateSetPackageChecksumsYml = null;
+
+            $lines = file('${buildDirectory}/${updateSetName}.zip.checksums');
+
+            foreach ($lines as $line) {
+                $line = trim($line);
+
+                if ($line) {
+                    $data = explode(' ', $line);
+                    $updateSetPackageChecksumsYml .= <<<YML
+          - type: {$data[0]}
+            value: {$data[1]}
+
+YML;
+                }
+            }
+
+            // stub YML
+            $yml = <<<YML
+---
+title: "Version ${targetVersion}"
+
+version_number: "${targetVersion}"
+version_code: "${targetVersionCode}"
+
+packages:
+  - type: mybb
+    formats:
+      - type: zip
+        filesize: "{$distSetPackageSize} MB"
+        checksums:
+{$distSetPackageChecksumsYml}
+  - type: changed_files
+    formats:
+      - type: zip
+        filesize: "{$updateSetPackageSize} MB"
+        checksums:
+{$updateSetPackageChecksumsYml}
+{$changedFilesYml}{$changedTemplatesYml}
+---
+YML;
+
+            file_put_contents('${distVersionDataFile}', $yml);
+        ]]></php>
     </target>
 
     <target name="output" description="Copies the build packages and metadata to the output directory">
