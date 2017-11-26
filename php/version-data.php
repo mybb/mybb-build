@@ -151,6 +151,8 @@ YML;
 }
 
 // changed language files YML
+$changedLanguageFilesNumberYml = null;
+
 $realpath = realpath($args['updateSetDirectory'] . '/' . $args['languageFilesPackageDirectory']);
 
 if (is_dir($realpath)) {

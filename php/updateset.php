@@ -112,6 +112,8 @@ if (!empty($changedFileList)) {
 }
 
 // save a list of removed files
+$removedFileList = [];
+
 $RecursiveDirectoryIterator = new RecursiveDirectoryIterator(realpath($args['previousSourceDirectory']));
 $RecursiveIteratorIterator = new RecursiveIteratorIterator($RecursiveDirectoryIterator);
 
