@@ -101,8 +101,8 @@
     <property name="distSetSourceDirectory" value="${distSetDirectory}/${distSetSourceSubdirectory}" />
 
     <!-- group tasks -->
-    <target name="dist-set" description="Executes tasks to build the distribution package" depends="hardcoded-versions,prepare,copy-clean,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,addendum,package,package-determinism,package-hash,version-data,output" />
-    <target name="full" description="Executes tasks to build both distribution and update packages" depends="hardcoded-versions,prepare,copy-clean,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,updateset,install-to-updateset-if-chosen,changed-templates,addendum,package,updateset-package,package-determinism,updateset-package-determinism,package-hash,updateset-package-hash,version-data,output" />
+    <target name="dist-set" description="Executes tasks to build the distribution package" depends="hardcoded-versions,prepare,copy-clean,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,addendum,package,package-determinism,package-checksums,version-data,output" />
+    <target name="full" description="Executes tasks to build both distribution and update packages" depends="hardcoded-versions,prepare,copy-clean,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,updateset,install-to-updateset-if-chosen,changed-templates,addendum,package,updateset-package,package-determinism,updateset-package-determinism,package-checksums,updateset-package-checksums,version-data,output" />
 
     <!-- build process -->
     <!-- build process: input analysis -->
@@ -340,19 +340,19 @@
     </target>
 
     <!-- build process: package metadata -->
-    <target name="package-hash" description="Creates hashes of the target file set archive" depends="package">
-        <exec passthru="true" command="php php/package-hash.php
+    <target name="package-checksums" description="Creates checksums of the target file set archive" depends="package">
+        <exec passthru="true" command="php php/file-checksums.php
             --path '${buildDirectory}/${distSetName}.zip'
             --algorithms 'md5,sha1,sha256,sha512'" />
     </target>
 
-    <target name="updateset-package-hash" description="Creates hashes of the update package set archive" depends="updateset-package">
-        <exec passthru="true" command="php php/package-hash.php
+    <target name="updateset-package-checksums" description="Creates checksums of the update package set archive" depends="updateset-package">
+        <exec passthru="true" command="php php/file-checksums.php
             --path '${buildDirectory}/${updateSetName}.zip'
             --algorithms 'md5,sha1,sha256,sha512'" />
     </target>
 
-    <target name="version-data" description="Generates a YAML data file for the target version" depends="package,package-hash">
+    <target name="version-data" description="Generates a YAML data file for the target version" depends="package,package-checksums">
         <delete file="${distVersionDataFile}" quiet="true" />
         <exec passthru="true" command="php php/version-data.php
             --buildDirectory '${buildDirectory}'
