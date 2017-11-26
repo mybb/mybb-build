@@ -8,7 +8,33 @@ $args = getopt(null, [
     'algorithm:',
 ]);
 
-$hashes = [];
+function directoryStructureSort($a, $b) {
+    $aNesting = substr_count($a, '/');
+    $bNesting = substr_count($b, '/');
+
+    if ($aNesting == 0 && $bNesting == 0) {
+        return strnatcmp($a, $b);
+    } elseif ($aNesting == 0) {
+        return 1;
+    } elseif ($bNesting == 0) {
+        return -1;
+    } else {
+        $aParents = array_slice(explode('/', $a), 0, -1);
+        $bParents = array_slice(explode('/', $b), 0, -1);
+
+        foreach ($aParents as $order => $name) {
+            if (isset($bParents[$order])) {
+                if ($name != $bParents[$order]) {
+                    return strnatcmp($name, $bParents[$order]);
+                }
+            } else {
+                return -1;
+            }
+        }
+
+        return 0;
+    }
+}
 
 function processFile($filePath, $varyingEolEncoding = false)
 {
@@ -16,9 +42,7 @@ function processFile($filePath, $varyingEolEncoding = false)
 
     $content = file_get_contents($filePath);
 
-    $fileHashes = [
-        'original' => hash($args['algorithm'], $content),
-    ];
+    $fileHashes = [];
 
     $packageFilePath = str_replace($args['distSetSourceDirectory'] . '/', null, $filePath);
 
@@ -26,10 +50,14 @@ function processFile($filePath, $varyingEolEncoding = false)
         $fileHashes[] = hash($args['algorithm'], str_replace(["\r\n", "\r"], "\n", $content));
         $fileHashes[] = hash($args['algorithm'], str_replace(["\r\n", "\r", "\n"], "\r\n", $content));
         $fileHashes[] = hash($args['algorithm'], str_replace(["\r\n", "\n"], "\r", $content));
+    } else {
+        $fileHashes[] = hash($args['algorithm'], $content);
     }
 
     $hashes[$packageFilePath] = $fileHashes;
 }
+
+$hashes = [];
 
 $files = explode(',', $args['standardFilesCsv']);
 $varyingEolEncodingFiles = explode(',', $args['varyingEolEncodingFilesCsv']);
@@ -42,7 +70,7 @@ foreach ($varyingEolEncodingFiles as $file) {
     processFile($file, true);
 }
 
-ksort($files);
+uksort($hashes, 'directoryStructureSort');
 
 $lines = [];
 
