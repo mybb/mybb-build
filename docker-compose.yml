@@ -6,5 +6,5 @@ services:
         build:
             context: .
         volumes:
-            - ./sources:/home/user/sources/:ro
+            - ./input:/home/user/input/:ro
             - ./output:/home/user/output/

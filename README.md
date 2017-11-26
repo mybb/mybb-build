@@ -1,22 +1,22 @@
 # mybb-build
 The MyBB package build script.
 
-# Phing builds
+## Phing builds
 [Phing](https://www.phing.info/) is used to generate release packages with associated data from the development repository.
 
-### Requirements
+#### Requirements
 - [PHP](https://secure.php.net/) (https://secure.php.net/manual/en/install.php)
 - [Archive_Tar PEAR package](https://pear.php.net/package/Archive_Tar)
 - [git](https://git-scm.com/)
 - [strip-nondeterminism](https://packages.debian.org/sid/strip-nondeterminism)
 - [Phing](https://www.phing.info/) (http://www.phing.info/get/phing-latest.phar)
 
-### Working directory structure
-- `sources/dist-addendum/` - additional files attached to the release package,
-- `sources/patch/` - directory containing git patch/diff files to be applied,
-- `sources/previous-clean-source/` - directory containing source files of the previous release,
-- `sources/raw-source/` - directory containing development source files (e.g. a git repository),
-- `sources/build.properties` - variables specific to the target release,
+#### Directory structure
+- `input/package-addendum/` - additional files attached to the release package,
+- `input/patchs/` - directory containing git patch/diff files to be applied,
+- `input/previous-source/` - directory containing source files of the previous release,
+- `input/source/` - directory containing development source files (e.g. a git repository),
+- `input/build.properties` - variables specific to the target release,
 - `build.xml` - project-specific Phing package building instructions.
 
 After Phing is run the build files are located in the `build/` directory. Output packages and metadata are copied to `output/`.
@@ -30,8 +30,8 @@ Take a look into `build.xml` to get familiar wit the build process and task (`<t
 
 **It is recommended to run the tools with at least 2048 MB of memory available to PHP and external tools.**
 
-# Docker
-It is possible to run the build script with [Docker](https://www.docker.com/) and have it set up dependencies automatically.
+## Docker
+It is recommended to run the build script with [Docker](https://www.docker.com/) and have it set up dependencies automatically.
 
 Fetch the repository and place source files according to the description above and build the Docker service from the directory:
 ```

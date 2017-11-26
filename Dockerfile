@@ -31,6 +31,10 @@ RUN chmod +x /usr/local/bin/phing
 # Set custom PHP configuration directives
 COPY ./php-additional.ini /usr/local/etc/php/conf.d/php-additional.ini
 
+# Add build scripts
+COPY ./php/ ./php/
+RUN chmod +x ./php/*.php
+
 # Add Phing project build file
 COPY ./build.xml ./build.xml
 

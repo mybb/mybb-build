@@ -2,27 +2,28 @@
 
 <project name="MyBB" default="full" basedir=".">
     <!-- build settings -->
-    <property file="${project.basedir}/sources/build.properties" />
+    <property file="${project.basedir}/input/build.properties" />
 
-    <property name="sourceDirectory" value="${project.basedir}/sources/raw-source" />
-    <property name="previousCleanSourceDirectory" value="${project.basedir}/sources/previous-clean-source" />
-    <property name="patchDirectory" value="${project.basedir}/sources/patch" />
-    <property name="distAddendumDirectory" value="${project.basedir}/sources/dist-addendum" />
+    <property name="sourceDirectory" value="${project.basedir}/input/source" />
+    <property name="previousSourceDirectory" value="${project.basedir}/input/previous-source" />
+    <property name="patchesDirectory" value="${project.basedir}/input/patches" />
+    <property name="packageAddendumDirectory" value="${project.basedir}/input/package-addendum" />
     <property name="buildDirectory" value="${project.basedir}/build" />
     <property name="outputDirectory" value="${project.basedir}/output" />
 
     <!-- project settings -->
-    <propertyregex property="targetVersionCode" subject="${targetVersion}" pattern="[^0-9a-z]" replace="" match="$1" defaultValue="$0" />
+    <propertyregex property="targetVersionCode" override="false" subject="${targetVersion}" pattern="[^0-9a-z]" replace="" match="$1" defaultValue="$0" />
 
-    <property name="distSetSourceSubdirectory" value="Upload" />
-    <property name="installSubdirectory" value="install" />
+    <property name="installPackageSubdirectory" value="install" />
+    <property name="languageFilesPackageDirectory" value="inc/languages/english/" />
 
     <property name="classCoreVersionRegex">public \$version = "([0-9a-zA-Z.-]+)";</property>
     <property name="englishManifestVersionRegex">\$langinfo\['version'\] = "([0-9a-zA-Z.-]+)";</property>
     <property name="masterThemeManifestVersionRegex"><![CDATA[<theme name="MyBB Master Style" version="([0-9a-zA-Z.-]+)">]]></property>
     <property name="changedTemplatesRegex"><![CDATA[<template name="()" version="${targetVersionCode}">]]></property>
 
-    <!-- file structure settings -->
+    <!-- output settings -->
+    <property name="distSetSourceSubdirectory" value="Upload" />
     <property name="distSetPrefix" value="mybb_" />
     <property name="updateSetPrefix" value="changed_files_" />
     <property name="distChecksumsFilePrefix" value="checksums_" />
@@ -30,7 +31,6 @@
     <property name="distRemovedFilesFilePrefix" value="removed_files_list_" />
     <property name="distChangedTemplatesFilePrefix" value="changed_templates_list_" />
     <property name="distPluginHooksFilePrefix" value="18_plugin_hooks" />
-    <property name="updateSetLanguageFilesDirectory" value="inc/languages/english/" />
 
     <!-- files to exclude when copying files for distribution packages -->
     <patternset id="dist_excluded_files">
@@ -62,6 +62,24 @@
         </or>
     </selector>
 
+    <!-- files which should be writable -->
+    <selector id="writable_files">
+        <or>
+            <filename name="inc/settings.php" />
+            <filename name="inc/config.default.php" />
+        </or>
+    </selector>
+
+    <!-- directories which should be writable -->
+    <selector id="writable_directories">
+        <or>
+            <filename name="cache" />
+            <filename name="cache/themes" />
+            <filename name="uploads" />
+            <filename name="uploads/avatars" />
+        </or>
+    </selector>
+
     <!-- files to ignore when creating the update set -->
     <patternset id="updateset_ignored_changed_files">
         <!--<exclude name="install/**"></exclude>-->
@@ -83,17 +101,37 @@
     <property name="distSetSourceDirectory" value="${distSetDirectory}/${distSetSourceSubdirectory}" />
 
     <!-- group tasks -->
-    <target name="dist-set" description="Executes tasks to build the distribution package" depends="prepare,copy-clean,hardcoded-versions,patch,eol,plugin-hooks,addendum,chmod,dist-checksums,package,package-determinism,package-hash,version-data,output" />
-    <target name="full" description="Executes tasks to build both distribution and update packages" depends="prepare,copy-clean,hardcoded-versions,patch,eol,plugin-hooks,addendum,chmod,updateset,changed-files,install-to-updateset-if-chosen,removed-files,changed-templates,dist-checksums,package,updateset-package,package-determinism,updateset-package-determinism,package-hash,updateset-package-hash,version-data,output" />
-    <target name="hardcoded-versions" description="Attempts to read the hardcoded versions" depends="version-core,version-englishlang,version-theme,previous-version-core" />
+    <target name="dist-set" description="Executes tasks to build the distribution package" depends="hardcoded-versions,prepare,copy-clean,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,addendum,package,package-determinism,package-hash,version-data,output" />
+    <target name="full" description="Executes tasks to build both distribution and update packages" depends="hardcoded-versions,prepare,copy-clean,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,updateset,install-to-updateset-if-chosen,changed-templates,addendum,package,updateset-package,package-determinism,updateset-package-determinism,package-hash,updateset-package-hash,version-data,output" />
 
     <!-- build process -->
+    <!-- build process: input analysis -->
+    <target name="hardcoded-versions" description="Attempts to read versions hardcoded in source files">
+        <loadfile property="content" file="${sourceDirectory}/inc/class_core.php" />
+        <propertyregex property="version" subject="${content}" pattern="${classCoreVersionRegex}" match="$1" defaultValue="Not found" />
+        <echo message="Version in inc/class_core.php: ${version}" />
+
+        <loadfile property="content" file="${sourceDirectory}/inc/languages/english.php" />
+        <propertyregex property="version" subject="${content}" pattern="${englishManifestVersionRegex}" match="$1" defaultValue="Not found" />
+        <echo message="Version in inc/languages/english.php: ${version}" />
+
+        <loadfile property="content" file="${sourceDirectory}/install/resources/mybb_theme.xml" />
+        <propertyregex property="version" subject="${content}" pattern="${masterThemeManifestVersionRegex}" match="$1" defaultValue="Not found" />
+        <echo message="Version in install/resources/mybb_theme.xml: ${version}" />
+
+        <loadfile property="content" file="${previousSourceDirectory}/inc/class_core.php" />
+        <propertyregex property="version" subject="${content}" pattern="${classCoreVersionRegex}" match="$1" defaultValue="Not found" />
+        <echo message="Version in previous inc/class_core.php: ${version}" />
+    </target>
+
+    <!-- build process: output preparation -->
     <target name="prepare" description="Creates an empty directory for build files">
         <delete dir="${buildDirectory}" quiet="true" />
         <mkdir dir="${buildDirectory}" />
     </target>
 
-    <target name="copy-clean" description="Copies files intended for distribution sets">
+    <!-- build process: distribution set operations -->
+    <target name="copy-clean" description="Copies files intended for distribution sets" depends="prepare">
         <mkdir dir="${distSetDirectory}" />
         <mkdir dir="${distSetSourceDirectory}" />
 
@@ -105,267 +143,133 @@
         </copy>
     </target>
 
-    <target name="version-core" description="Attempts to read the version hardcoded in the MyBB class in the target ">
-        <loadfile property="content" file="${distSetSourceDirectory}/inc/class_core.php" />
-        <propertyregex property="version" subject="${content}" pattern="${classCoreVersionRegex}" match="$1" defaultValue="Not found" />
-        <echo message="Version in inc/class_core.php: ${version}" />
+    <target name="chmod" description="Applies file permissions to the target set" depends="copy-clean">
+        <chmod mode="0777">
+            <fileset dir="${distSetSourceDirectory}">
+                <selector refid="writable_directories" />
+                <type type="dir" />
+            </fileset>
+        </chmod>
+
+        <chmod mode="0666">
+            <fileset dir="${distSetSourceDirectory}">
+                <selector refid="writable_files" />
+                <type type="file" />
+            </fileset>
+        </chmod>
+
+        <chmod mode="0644">
+            <fileset dir="${distSetSourceDirectory}">
+                <include name="**" />
+                <not>
+                    <selector refid="writable_files" />
+                </not>
+                <type type="file" />
+            </fileset>
+        </chmod>
     </target>
 
-    <target name="version-englishlang" description="Attempts to read the version hardcoded in the English language manifest file">
-        <loadfile property="content" file="${distSetSourceDirectory}/inc/languages/english.php" />
-        <propertyregex property="version" subject="${content}" pattern="${englishManifestVersionRegex}" match="$1" defaultValue="Not found" />
-        <echo message="Version in inc/languages/english.php: ${version}" />
-    </target>
-
-    <target name="version-theme" description="Attempts to read the version hardcoded in MyBB Master Style manifest file">
-        <loadfile property="content" file="${distSetSourceDirectory}/install/resources/mybb_theme.xml" />
-        <propertyregex property="version" subject="${content}" pattern="${masterThemeManifestVersionRegex}" match="$1" defaultValue="Not found" />
-        <echo message="Version in install/resources/mybb_theme.xml: ${version}" />
-    </target>
-
-    <target name="previous-version-core" description="Attempts to read the previous set's version hardcoded in the MyBB class">
-        <loadfile property="content" file="${previousCleanSourceDirectory}/inc/class_core.php" />
-        <propertyregex property="version" subject="${content}" pattern="${classCoreVersionRegex}" match="$1" defaultValue="Not found" />
-        <echo message="Version in previous inc/class_core.php: ${version}" />
-    </target>
-
-    <target name="patch" description="Applies attached git patches to the target file set">
+    <target name="patch" description="Applies attached git patches to the target file set" depends="copy-clean">
         <apply executable="git" dir="${distSetSourceDirectory}">
             <arg value="apply" />
             <arg value="--ignore-whitespace" />
-            <fileset dir="${patchDirectory}">
+            <fileset dir="${patchesDirectory}">
                 <include name="**" />
             </fileset>
         </apply>
     </target>
 
-    <target name="patch-reverse" description="Reverses attached git patches in the target file set">
+    <target name="patch-reverse" description="Reverses attached git patches in the target file set" depends="copy-clean">
         <apply executable="git" dir="${distSetSourceDirectory}">
             <arg value="apply" />
             <arg value="--reverse" />
             <arg value="--ignore-whitespace" />
-            <fileset dir="${patchDirectory}">
+            <fileset dir="${patchesDirectory}">
                 <include name="**" />
             </fileset>
         </apply>
     </target>
 
-    <target name="eol" description="Converts line encoding in the target file set">
-        <foreach param="filename" absparam="absfilename" target="eol-file">
-          <fileset dir="${distSetSourceDirectory}">
-                <selector refid="varying_eol_encoding_files" />
-                <type type="file" />
-          </fileset>
-        </foreach>
+    <target name="normalize-eol" description="Converts line encoding in the target file set" depends="copy-clean">
+        <fileset dir="${distSetSourceDirectory}" id="varyingEolEncodingFiles">
+            <selector refid="varying_eol_encoding_files" />
+            <type type="file" />
+        </fileset>
+        <pathconvert pathsep="," property="varyingEolEncodingFiles" refid="varyingEolEncodingFiles" />
+
+        <exec passthru="true" command="php php/normalize-eol.php
+            --varyingEolEncodingFiles '${varyingEolEncodingFiles}'" />
     </target>
 
-    <target name="eol-file" hidden="true">
-        <php returnProperty="contentStandardized"><![CDATA[
-            preg_replace("/\r\n|\r/", "\n", file_get_contents('${absfilename}'))
-        ]]></php>
-        <echo file="${absfilename}">${contentStandardized}</echo>
-    </target>
-
-    <target name="dates" description="Sets file modification times to a predefined date">
-        <php function="strtotime" returnProperty="packageDateTimestamp">
-            <param value="${packageDate}" />
-        </php>
-
-        <touch millis="${packageDateTimestamp}">
-          <fileset dir="${distSetDirectory}">
-                <include name="*" />
-                <include name="**" />
-          </fileset>
-        </touch>
-        <touch millis="${packageDateTimestamp}">
-          <fileset dir="${updateSetDirectory}">
-                <include name="*" />
-                <include name="**" />
-          </fileset>
-        </touch>
-    </target>
-
-    <target name="dist-checksums" description="Prints target file set checksums for different new line encodings">
+    <!-- build process: distribution set metadata -->
+    <target name="dist-checksums" description="Prints target file set checksums for different new line encodings" depends="copy-clean">
         <delete file="${distChecksumsFile}" quiet="true" />
 
-        <foreach param="filename" absparam="absfilename" target="dist-checksums-file-standard">
-          <fileset dir="${distSetSourceDirectory}">
-                <not>
-                    <selector refid="varying_eol_encoding_files" />
-                </not>
-                <type type="file" />
-          </fileset>
-        </foreach>
+        <fileset dir="${distSetSourceDirectory}" id="varyingEolEncodingFiles">
+            <selector refid="varying_eol_encoding_files" />
+            <type type="file" />
+        </fileset>
+        <pathconvert pathsep="," property="varyingEolEncodingFilesCsv" refid="varyingEolEncodingFiles" />
 
-        <foreach param="filename" absparam="absfilename" target="dist-checksums-file-varying-eol-encoding">
-          <fileset dir="${distSetSourceDirectory}">
+        <fileset dir="${distSetSourceDirectory}" id="standardFiles">
+            <not>
                 <selector refid="varying_eol_encoding_files" />
-                <type type="file" />
-          </fileset>
-        </foreach>
+            </not>
+            <type type="file" />
+        </fileset>
+        <pathconvert pathsep="," property="standardFilesCsv" refid="standardFiles" />
 
-        <!-- sort by filename -->
-        <php returnProperty="contentOrdered"><![CDATA[
-            $lines = file('${distChecksumsFile}');
-
-            $files = [];
-
-            foreach ($lines as $line) {
-                $values = explode(' ', trim($line));
-                $files[ $values[1] ][] = $values[0];
-            }
-
-            ksort($files);
-
-            $lines = [];
-
-            foreach ($files as $filename => $checksums) {
-                foreach ($checksums as $checksum) {
-                    $lines[] = $checksum . ' ' . $filename;
-                }
-            }
-
-            file_put_contents('${distChecksumsFile}', implode("\n", $lines));
-        ]]></php>
+        <exec passthru="true" command="php php/dist-checksums.php
+            --standardFilesCsv '${standardFilesCsv}'
+            --varyingEolEncodingFilesCsv '${varyingEolEncodingFilesCsv}'
+            --distSetSourceDirectory '${distSetSourceDirectory}'
+            --distChecksumsFile '${distChecksumsFile}'
+            --algorithm 'md5'" />
     </target>
 
-    <target name="dist-checksums-file-standard" hidden="true">
-        <if>
-            <available file="${absfilename}" type="file" />
-            <then>
-                <php function="str_replace" returnProperty="filenameStandardized">
-                    <param value="\" />
-                    <param value="/" />
-                    <param value="${filename}" />
-                </php>
-
-                <php returnProperty="hash"><![CDATA[
-                    md5_file('${absfilename}')
-                ]]></php>
-
-                <echo file="${distChecksumsFile}" append="true">${hash} ./${filenameStandardized}${line.separator}</echo>
-            </then>
-        </if>
+    <target name="plugin-hooks" description="Generates a list of plugin hooks basing on the target file set" depends="copy-clean">
+        <delete file="${distPluginHooksFile}" quiet="true" />
+        <exec passthru="true" command="php php/plugin-hooks.php
+            --distSetSourceDirectory '${distSetSourceDirectory}'
+            --targetVersionCode '${targetVersionCode}'
+            --distPluginHooksFile '${distPluginHooksFile}'" />
     </target>
 
-    <target name="dist-checksums-file-varying-eol-encoding" hidden="true">
-        <if>
-            <available file="${absfilename}" type="file" />
-            <then>
-                <php function="str_replace" returnProperty="filenameStandardized">
-                    <param value="\" />
-                    <param value="/" />
-                    <param value="${filename}" />
-                </php>
-
-                <php returnProperty="hash3"><![CDATA[
-                    md5(str_replace(array("\r\n", "\r"), "\n", file_get_contents('${absfilename}')))
-                ]]></php>
-                <php returnProperty="hash2"><![CDATA[
-                    md5(str_replace(array("\r\n", "\r", "\n"), "\r\n", file_get_contents('${absfilename}')))
-                ]]></php>
-                <php returnProperty="hash4"><![CDATA[
-                    md5(str_replace(array("\r\n", "\n"), "\r", file_get_contents('${absfilename}')))
-                ]]></php>
-
-                <echo file="${distChecksumsFile}" append="true">${hash2} ./${filenameStandardized}${line.separator}</echo>
-                <echo file="${distChecksumsFile}" append="true">${hash3} ./${filenameStandardized}${line.separator}</echo>
-                <echo file="${distChecksumsFile}" append="true">${hash4} ./${filenameStandardized}${line.separator}</echo>
-
-            </then>
-        </if>
-    </target>
-
-    <target name="updateset" description="Compares the target and previous file sets to generate the set of updated or new files">
+    <!-- build process: update set operations -->
+    <target name="updateset" description="Compares the target and previous file sets to generate the set of updated or new files" depends="copy-clean">
         <delete dir="${updateSetDirectory}" quiet="true" />
+
+        <fileset dir="${distSetSourceDirectory}" id="distFiles">
+            <include name="**" />
+            <patternset refid="dist_excluded_files" />
+            <patternset refid="updateset_ignored_changed_files" />
+        </fileset>
+        <pathconvert pathsep="," property="distFilesCsv" refid="distFiles" />
+
+        <fileset dir="${previousSourceDirectory}" id="previousFiles">
+            <include name="**" />
+            <patternset refid="dist_excluded_files" />
+            <patternset refid="updateset_ignored_changed_files" />
+        </fileset>
+        <pathconvert pathsep="," property="previousFilesCsv" refid="previousFiles" />
+
         <mkdir dir="${updateSetDirectory}" />
-        <foreach param="filename" absparam="absfilename" target="updateset-file">
-            <property name="directory1" value="${distSetSourceDirectory}" />
-            <property name="directory2" value="${previousCleanSourceDirectory}" />
-            <fileset dir="${distSetSourceDirectory}">
-                <include name="**" />
-                <patternset refid="dist_excluded_files" />
-                <patternset refid="updateset_ignored_changed_files" />
-            </fileset>
-        </foreach>
+
+        <exec passthru="true" command="php php/updateset.php
+            --distFilesCsv '${distFilesCsv}'
+            --previousFilesCsv '${previousFilesCsv}'
+            --previousSourceDirectory '${previousSourceDirectory}'
+            --distSetSourceDirectory '${distSetSourceDirectory}'
+            --outputDirectory '${updateSetDirectory}'
+            --distChangedFilesFile '${distChangedFilesFile}'
+            --distRemovedFilesFile '${distRemovedFilesFile}'" />
+
+        <copy todir="${updateSetDirectory}" preservelastmodified="true">
+            <filelist dir="${distSetSourceDirectory}" listfile="${distChangedFilesFile}" />
+        </copy>
     </target>
 
-    <target name="updateset-file" hidden="true">
-        <if>
-            <available file="${directory1}/${filename}" type="file" />
-            <then>
-                <if>
-                    <available file="${directory2}/${filename}" type="file" />
-                    <then>
-                        <loadfile file="${directory1}/${filename}" property="file1Content">
-                            <filterchain>
-                                <replaceregexp>
-                                    <regexp pattern="\r\n|\r|\n" replace="${line.separator}" multiline="true" />
-                                </replaceregexp>
-                            </filterchain>
-                        </loadfile>
-                        <loadfile file="${directory2}/${filename}" property="file2Content">
-                            <filterchain>
-                                <replaceregexp>
-                                    <regexp pattern="\r\n|\r|\n" replace="${line.separator}" multiline="true" />
-                                </replaceregexp>
-                            </filterchain>
-                        </loadfile>
-
-                        <!-- Phing does not set properties with LoadFileTask if content is empty -->
-                        <if>
-                            <or>
-                                <xor>
-                                    <isset property="file1Content" />
-                                    <isset property="file2Content" />
-                                </xor>
-                                <and>
-                                    <isset property="file1Content" />
-                                    <isset property="file2Content" />
-                                    <not>
-                                        <equals arg1="${file1Content}" arg2="${file2Content}" />
-                                    </not>
-                                </and>
-                            </or>
-                            <then>
-                                <copy file="${absfilename}" tofile="${updateSetDirectory}/${filename}" preservelastmodified="true" />
-                            </then>
-                        </if>
-                    </then>
-                    <else>
-                        <copy file="${absfilename}" tofile="${updateSetDirectory}/${filename}" preservelastmodified="true" />
-                    </else>
-                </if>
-            </then>
-        </if>
-    </target>
-
-    <target name="changed-files" description="Generates a list of files in the update package set">
-        <delete file="${distChangedFilesFile}" quiet="true" />
-        <php><![CDATA[
-            $fileList = [];
-
-            $realpath = realpath('${updateSetDirectory}');
-
-            $RecursiveDirectoryIterator = new RecursiveDirectoryIterator($realpath);
-            $RecursiveIteratorIterator = new RecursiveIteratorIterator($RecursiveDirectoryIterator);
-
-            foreach ($RecursiveIteratorIterator as $path) {
-                if (is_file($path)) {
-                    $pathNormalized = str_replace($realpath . DIRECTORY_SEPARATOR, null, $path);
-                    $pathNormalized = str_replace('\\', '/', $pathNormalized);
-
-                    $fileList[] = $pathNormalized;
-                }
-            }
-
-            if ($fileList) {
-                file_put_contents('${distChangedFilesFile}', implode("\n", $fileList));
-            }
-        ]]></php>
-    </target>
-
-    <target name="install-to-updateset-if-chosen" hidden="true">
+    <target name="install-to-updateset-if-chosen" hidden="true" depends="updateset">
         <if>
             <istrue value="${includeInstallInUpdateSet}" />
             <then>
@@ -375,181 +279,33 @@
     </target>
 
     <target name="install-to-updateset" description="Copies the install directory from the source set to the update package set">
-        <copy todir="${updateSetDirectory}/${installSubdirectory}" preservelastmodified="true">
-            <fileset dir="${distSetSourceDirectory}/${installSubdirectory}">
+        <copy todir="${updateSetDirectory}/${installPackageSubdirectory}" preservelastmodified="true">
+            <fileset dir="${distSetSourceDirectory}/${installPackageSubdirectory}">
                 <include name="**" />
                 <patternset refid="dist_excluded_files" />
             </fileset>
         </copy>
     </target>
 
-    <target name="removed-files" description="Generates a list of files removed since the previous file set">
-        <delete file="${distRemovedFilesFile}" quiet="true" />
-        <foreach param="filename" absparam="absfilename" target="removed-files-file">
-            <property name="directory1" value="${previousCleanSourceDirectory}" />
-            <property name="directory2" value="${distSetSourceDirectory}" />
-            <fileset dir="${previousCleanSourceDirectory}">
-                <include name="**" />
-                <patternset refid="dist_excluded_files" />
-            </fileset>
-        </foreach>
-    </target>
-
-    <target name="removed-files-file" hidden="true">
-        <if>
-            <and>
-                <available file="${directory1}/${filename}" type="file" />
-                <not>
-                    <available file="${directory2}/${filename}" type="file" />
-                </not>
-            </and>
-            <then>
-                <if>
-                    <not>
-                        <available file="${distRemovedFilesFile}" type="file" />
-                    </not>
-                    <then>
-                        <echo file="${distRemovedFilesFile}" append="false">Listing removed files for ${targetVersion}${line.separator}${line.separator}</echo>
-                    </then>
-                </if>
-                <echo file="${distRemovedFilesFile}" append="true">${filename}${line.separator}</echo>
-            </then>
-        </if>
-    </target>
-
-    <target name="changed-templates" description="Generates a list of templates set to the target version">
+    <!-- build process: update set metadata -->
+    <target name="changed-templates" description="Generates a list of templates set to the target version" depends="updateset">
         <delete file="${distChangedTemplatesFile}" quiet="true" />
-        <php><![CDATA[
-            $templateNames = [];
-
-            $xml = simplexml_load_file('${distSetSourceDirectory}/install/resources/mybb_theme.xml');
-
-            foreach ($xml->templates[0]->template as $element) {
-                $version = (string)$element->attributes()['version'];
-
-                if ($version == '${targetVersionCode}') {
-                    $name = $element->attributes()['name'];
-                    $templateNames[] = (string)$name;
-                }
-            }
-
-            natsort($templateNames);
-
-            if ($templateNames) {
-                file_put_contents('${distChangedTemplatesFile}', implode("\n", $templateNames));
-            }
-        ]]></php>
+        <exec passthru="true" command="php php/changed-templates.php
+            --distSetSourceDirectory '${distSetSourceDirectory}'
+            --targetVersionCode '${targetVersionCode}'
+            --distChangedTemplatesFile '${distChangedTemplatesFile}'" />
     </target>
 
-    <target name="plugin-hooks" description="Generates a list of plugin hooks basing on the target file set">
-        <delete file="${distPluginHooksFile}" quiet="true" />
-        <php><![CDATA[
-            $hooks = [];
-
-            $realpath = realpath('${distSetSourceDirectory}');
-
-            $pattern = '/\$plugins->run_hooks\((\'|")(?<name>[a-zA-Z0-9_]+)\1(?:, ?(?<parameters>[^)]*))*\)/';
-
-            $RecursiveDirectoryIterator = new RecursiveDirectoryIterator($realpath);
-            $RecursiveIteratorIterator = new RecursiveIteratorIterator($RecursiveDirectoryIterator);
-
-            foreach ($RecursiveIteratorIterator as $path) {
-                if (is_file($path) && pathinfo($path, PATHINFO_EXTENSION) == 'php') {
-                    $pathNormalized = str_replace($realpath . DIRECTORY_SEPARATOR, null, $path);
-                    $pathNormalized = str_replace('\\', '/', $pathNormalized);
-
-                    $fileHandle = fopen($path, 'r');
-
-                    if ($fileHandle) {
-                        $lineNumber = 0;
-
-                        while (($lineContent = fgets($fileHandle, 4096)) !== false) {
-                            $lineNumber++;
-
-                            $result = preg_match($pattern, $lineContent, $matches);
-
-                            if ($result) {
-                                if (isset($matches['parameters'])) {
-                                    $parameters = explode(',', $matches['parameters']);
-
-                                    array_walk($parameters, 'trim');
-                                } else {
-                                    $parameters = [];
-                                }
-
-                                $hooks[] = [
-                                    'name' => $matches['name'],
-                                    'file' => $pathNormalized,
-                                    'line' => $lineNumber,
-                                    'parameters' => $parameters,
-                                ];
-                            }
-                        }
-
-                        fclose($fileHandle);
-                    }
-                }
-            }
-
-            $hooksYml = <<<YML
-hooks:
-
-YML;
-
-            foreach ($hooks as $hook) {
-                if ($hook['parameters']) {
-                    $parametersYml = <<<YML
-    parameters:
-
-YML;
-
-                    foreach ($hook['parameters'] as $paramater) {
-                        $parameterEscaped = addcslashes($paramater, '"');
-
-                        $parametersYml .= <<<YML
-      - "{$parameterEscaped}"
-
-YML;
-                    }
-                } else {
-                    $parametersYml = '';
-                }
-
-                $hooksYml .= <<<YML
-  - name: {$hook['name']}
-    file: {$hook['file']}
-    line: {$hook['line']}
-{$parametersYml}
-YML;
-            }
-
-            $yml = <<<YML
-version_code: ${targetVersionCode}
-{$hooksYml}
-YML;
-
-            file_put_contents('${distPluginHooksFile}', $yml);
-        ]]></php>
-    </target>
-
-    <target name="addendum" description="Copies additional files to the target file set">
+    <!-- build process: package operations -->
+    <target name="addendum" description="Copies additional files to the target file set" depends="copy-clean">
         <copy todir="${distSetDirectory}" preservelastmodified="true">
-            <fileset dir="${distAddendumDirectory}">
+            <fileset dir="${packageAddendumDirectory}">
                 <include name="**" />
             </fileset>
         </copy>
     </target>
 
-    <target name="chmod" description="Applies file permissions to the target set">
-        <chmod file="${distSetSourceDirectory}/inc/settings.php" mode="0666" />
-        <chmod file="${distSetSourceDirectory}/inc/config.default.php" mode="0666" />
-        <chmod file="${distSetSourceDirectory}/cache" mode="0777" />
-        <chmod file="${distSetSourceDirectory}/cache/themes" mode="0777" />
-        <chmod file="${distSetSourceDirectory}/uploads" mode="0777" />
-        <chmod file="${distSetSourceDirectory}/uploads/avatars" mode="0777" />
-    </target>
-
-    <target name="package" description="Creates an archive from the target file set">
+    <target name="package" description="Creates an archive from the target file set" depends="copy-clean">
         <delete file="${buildDirectory}/${distSetName}.zip" quiet="true" />
         <zip destfile="${buildDirectory}/${distSetName}.zip">
             <fileset dir="${distSetDirectory}">
@@ -558,7 +314,7 @@ YML;
         </zip>
     </target>
 
-    <target name="updateset-package" description="Creates an archive from the update package set">
+    <target name="updateset-package" description="Creates an archive from the update package set" depends="updateset">
         <delete file="${buildDirectory}/${updateSetName}.zip" quiet="true" />
         <zip destfile="${buildDirectory}/${updateSetName}.zip">
             <fileset dir="${updateSetDirectory}">
@@ -567,7 +323,7 @@ YML;
         </zip>
     </target>
 
-    <target name="package-determinism" description="Strips non-deterministic information from the package archive">
+    <target name="package-determinism" description="Strips non-deterministic information from the package archive" depends="package">
         <php function="strtotime" returnProperty="packageDateTimestamp">
             <param value="${packageDate}" />
         </php>
@@ -575,7 +331,7 @@ YML;
         <exec command="strip-nondeterminism --timestamp ${packageDateTimestamp} ${buildDirectory}/${distSetName}.zip" checkreturn="true" />
     </target>
 
-    <target name="updateset-package-determinism" description="Strips non-deterministic information from the update set package archive">
+    <target name="updateset-package-determinism" description="Strips non-deterministic information from the update set package archive" depends="updateset-package">
         <php function="strtotime" returnProperty="packageDateTimestamp">
             <param value="${packageDate}" />
         </php>
@@ -583,191 +339,36 @@ YML;
         <exec command="strip-nondeterminism --timestamp ${packageDateTimestamp} ${buildDirectory}/${updateSetName}.zip" checkreturn="true" />
     </target>
 
-    <target name="package-hash" description="Creates hashes of the target file set archive">
-        <phingcall target="hash-file">
-            <property name="absfilename" value="${buildDirectory}/${distSetName}.zip" />
-        </phingcall>
+    <!-- build process: package metadata -->
+    <target name="package-hash" description="Creates hashes of the target file set archive" depends="package">
+        <exec passthru="true" command="php php/package-hash.php
+            --path '${buildDirectory}/${distSetName}.zip'
+            --algorithms 'md5,sha1,sha256,sha512'" />
     </target>
 
-    <target name="updateset-package-hash" description="Creates hashes of the update package set archive">
-        <phingcall target="hash-file">
-            <property name="absfilename" value="${buildDirectory}/${updateSetName}.zip" />
-        </phingcall>
+    <target name="updateset-package-hash" description="Creates hashes of the update package set archive" depends="updateset-package">
+        <exec passthru="true" command="php php/package-hash.php
+            --path '${buildDirectory}/${updateSetName}.zip'
+            --algorithms 'md5,sha1,sha256,sha512'" />
     </target>
 
-    <target name="hash-file" hidden="true">
-        <echo file="${absfilename}.checksums" append="false"></echo>
-        <foreach list="md5,sha1,sha256,sha512" param="algorithm" target="hash-file-algorithm" />
-    </target>
-
-    <target name="hash-file-algorithm" hidden="true">
-        <filehash file="${absfilename}" algorithm="${algorithm}" propertyname="filehashvalue" />
-        <echo file="${absfilename}.checksums" append="true">${algorithm} ${filehashvalue}${line.separator}</echo>
-    </target>
-
-    <target name="version-data" description="Generates a YAML data file for the target version">
+    <target name="version-data" description="Generates a YAML data file for the target version" depends="package,package-hash">
         <delete file="${distVersionDataFile}" quiet="true" />
-        <php><![CDATA[
-            $changedFilesFile = '${distChangedFilesFile}';
-            $changedTemplatesFile = '${distChangedTemplatesFile}';
-
-            // changed files YML
-            $changedFilesYml = null;
-
-            if (file_exists($changedFilesFile)) {
-                $changedFiles = file($changedFilesFile);
-
-                $changedFilesArray = [];
-
-                foreach ($changedFiles as $path) {
-                    $parents = explode('/', $path);
-                    $file = trim(array_pop($parents));
-
-                    $immediateParent = &$changedFilesArray;
-                    foreach ($parents as $parent) {
-                        $immediateParent = &$immediateParent[$parent];
-                    }
-
-                    $immediateParent[] = $file;
-                }
-
-                $changedFilesYml = <<<YML
-
-changed_files:
-
-YML;
-
-                function arrayToYml($array, $level = 1)
-                {
-                    $output = null;
-
-                    foreach ($array as $key => $value) {
-                        $output .= str_repeat('  ', $level) . '- ';
-
-                        if (is_array($value)) {
-                            $output .= $key . ":\n";
-                            $output .= arrayToYml($value, $level + 1);
-                        } else {
-                            $output .= $value . "\n";
-                        }
-                    }
-
-                    return $output;
-                }
-
-                $changedFilesYml .= arrayToYml($changedFilesArray);
-            }
-
-            // changed templates YML
-            $changedTemplatesYml = null;
-
-            if (file_exists($changedTemplatesFile)) {
-                $changedTemplates = file($changedTemplatesFile);
-
-                $changedTemplatesYml = <<<YML
-
-changed_templates:
-
-YML;
-
-                foreach ($changedTemplates as $value) {
-                    $value = trim($value);
-
-                    $changedTemplatesYml .= <<<YML
-  - {$value}
-
-YML;
-                }
-            }
-
-            // changed language files YML
-            $realpath = realpath('${updateSetDirectory}/${updateSetLanguageFilesDirectory}');
-
-            $count = 0;
-
-            $RecursiveDirectoryIterator = new RecursiveDirectoryIterator($realpath);
-            $RecursiveIteratorIterator = new RecursiveIteratorIterator($RecursiveDirectoryIterator);
-
-            foreach ($RecursiveIteratorIterator as $path) {
-                if (is_file($path)) {
-                    $count++;
-                }
-            }
-
-            if ($count) {
-                $changedLanguageFilesNumberYml = <<<YML
-changed_language_files_number: "{$count}"
-
-YML;
-            }
-
-            // packages YML
-            $distSetPackageSize = round(filesize('${buildDirectory}/${distSetName}.zip') / 1024 / 1024, 2);
-            $updateSetPackageSize = round(filesize('${buildDirectory}/${updateSetName}.zip') / 1024 / 1024, 2);
-
-            $distSetPackageChecksumsYml = null;
-
-            $lines = file('${buildDirectory}/${distSetName}.zip.checksums');
-
-            foreach ($lines as $line) {
-                $line = trim($line);
-
-                if ($line) {
-                    $data = explode(' ', $line);
-                    $distSetPackageChecksumsYml .= <<<YML
-          - type: {$data[0]}
-            value: {$data[1]}
-
-YML;
-                }
-            }
-
-            $updateSetPackageChecksumsYml = null;
-
-            $lines = file('${buildDirectory}/${updateSetName}.zip.checksums');
-
-            foreach ($lines as $line) {
-                $line = trim($line);
-
-                if ($line) {
-                    $data = explode(' ', $line);
-                    $updateSetPackageChecksumsYml .= <<<YML
-          - type: {$data[0]}
-            value: {$data[1]}
-
-YML;
-                }
-            }
-
-            // stub YML
-            $yml = <<<YML
----
-title: "Version ${targetVersion}"
-
-version_number: "${targetVersion}"
-version_code: "${targetVersionCode}"
-
-packages:
-  - type: mybb
-    formats:
-      - type: zip
-        filesize: "{$distSetPackageSize} MB"
-        checksums:
-{$distSetPackageChecksumsYml}
-  - type: changed_files
-    formats:
-      - type: zip
-        filesize: "{$updateSetPackageSize} MB"
-        checksums:
-{$updateSetPackageChecksumsYml}
-{$changedLanguageFilesNumberYml}{$changedFilesYml}{$changedTemplatesYml}
----
-YML;
-
-            file_put_contents('${distVersionDataFile}', $yml);
-        ]]></php>
+        <exec passthru="true" command="php php/version-data.php
+            --buildDirectory '${buildDirectory}'
+            --distChangedFilesFile '${distChangedFilesFile}'
+            --distRemovedFilesFile '${distRemovedFilesFile}'
+            --distChangedTemplatesFile '${distChangedTemplatesFile}'
+            --updateSetDirectory '${updateSetDirectory}'
+            --languageFilesPackageDirectory '${languageFilesPackageDirectory}'
+            --distSetName '${distSetName}'
+            --updateSetName '${updateSetName}'
+            --targetVersion '${targetVersion}'
+            --targetVersionCode '${targetVersionCode}'
+            --distVersionDataFile '${distVersionDataFile}'" />
     </target>
 
+    <!-- build process: output -->
     <target name="output" description="Copies the build packages and metadata to the output directory">
         <delete dir="${outputDirectory}" quiet="true" />
         <mkdir dir="${outputDirectory}" />
