@@ -4,6 +4,6 @@ services:
     image: mybb-build
     build:
       context: ${PWD}
-  volumes:
-    - ${PWD}/input:/home/user/input/:ro
-    - ${PWD}/output:/home/user/output/
+    volumes:
+      - ${PWD}/input:/home/user/input/:ro
+      - ${PWD}/output:/home/user/output/
