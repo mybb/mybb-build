@@ -40,10 +40,10 @@ $ docker-compose build
 
 Once built it will be possible to run commands:
 ```
-$ docker-compose run phing-service phing -l
+$ docker-compose run phing -l
 ```
 
-The above example will run the `phing-service` with volumes `sources/` (read-only) and `build/` mounted to `/home/user/` and the `phing -l` command inside, listing available Phing tasks.
+The above example will run the `phing` service with volumes `sources/` (read-only) and `build/` mounted to `/home/user/` and the `phing -l` command inside, listing available Phing tasks.
 
 #### VirtualBox Shared Folders on Windows hosts
 On Windows-based hosts it may be necessary to add the directory in the Docker Machine's **Settings → Shared Folders** (e.g. `d:\mybb-build` named `d/mybb-build`) and manually mount the VirtualBox Shared Folders filesystem (`vboxsf`) to the `default` machine:

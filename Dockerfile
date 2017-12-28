@@ -40,3 +40,5 @@ COPY ./build.xml ./build.xml
 
 # Switch to the added user
 USER user
+
+ENTRYPOINT ["phing"]
