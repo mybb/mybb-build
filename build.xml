@@ -80,11 +80,6 @@
         </or>
     </selector>
 
-    <!-- files to ignore when creating the update set -->
-    <patternset id="updateset_ignored_changed_files">
-        <!--<exclude name="install/**"></exclude>-->
-    </patternset>
-
     <!-- internal properties -->
     <property name="distSetName" value="${distSetPrefix}${targetVersionCode}" />
     <property name="updateSetName" value="${updateSetPrefix}${targetVersionCode}" />
@@ -102,7 +97,7 @@
 
     <!-- group tasks -->
     <target name="dist-set" description="Executes tasks to build the distribution package" depends="hardcoded-versions,prepare,copy-clean,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,addendum,package,package-determinism,package-checksums,version-data,output" />
-    <target name="full" description="Executes tasks to build both distribution and update packages" depends="hardcoded-versions,prepare,copy-clean,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,updateset,install-to-updateset-if-chosen,changed-templates,addendum,package,updateset-package,package-determinism,updateset-package-determinism,package-checksums,updateset-package-checksums,version-data,output" />
+    <target name="full" description="Executes tasks to build both distribution and update packages" depends="hardcoded-versions,prepare,copy-clean,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,updateset,updateset-install-directory,changed-templates,addendum,package,updateset-package,package-determinism,updateset-package-determinism,package-checksums,updateset-package-checksums,version-data,output" />
 
     <!-- build process -->
     <!-- build process: input analysis -->
@@ -242,14 +237,12 @@
         <fileset dir="${distSetSourceDirectory}" id="distFiles">
             <include name="**" />
             <patternset refid="dist_excluded_files" />
-            <patternset refid="updateset_ignored_changed_files" />
         </fileset>
         <pathconvert pathsep="," property="distFilesCsv" refid="distFiles" />
 
         <fileset dir="${previousSourceDirectory}" id="previousFiles">
             <include name="**" />
             <patternset refid="dist_excluded_files" />
-            <patternset refid="updateset_ignored_changed_files" />
         </fileset>
         <pathconvert pathsep="," property="previousFilesCsv" refid="previousFiles" />
 
@@ -269,22 +262,21 @@
         </copy>
     </target>
 
-    <target name="install-to-updateset-if-chosen" hidden="true" depends="updateset">
+    <target name="updateset-install-directory" depends="updateset">
         <if>
             <istrue value="${includeInstallInUpdateSet}" />
             <then>
-                <phingcall target="install-to-updateset" />
+                <copy todir="${updateSetDirectory}/${installPackageSubdirectory}" preservelastmodified="true">
+                    <fileset dir="${distSetSourceDirectory}/${installPackageSubdirectory}">
+                        <include name="**" />
+                        <patternset refid="dist_excluded_files" />
+                    </fileset>
+                </copy>
             </then>
+            <else>
+                <delete dir="${updateSetDirectory}/${installPackageSubdirectory}" />
+            </else>
         </if>
-    </target>
-
-    <target name="install-to-updateset" description="Copies the install directory from the source set to the update package set">
-        <copy todir="${updateSetDirectory}/${installPackageSubdirectory}" preservelastmodified="true">
-            <fileset dir="${distSetSourceDirectory}/${installPackageSubdirectory}">
-                <include name="**" />
-                <patternset refid="dist_excluded_files" />
-            </fileset>
-        </copy>
     </target>
 
     <!-- build process: update set metadata -->
