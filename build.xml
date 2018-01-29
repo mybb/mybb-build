@@ -219,7 +219,7 @@
             --varyingEolEncodingFilesCsv '${varyingEolEncodingFilesCsv}'
             --distSetSourceDirectory '${distSetSourceDirectory}'
             --distChecksumsFile '${distChecksumsFile}'
-            --algorithm 'md5'" />
+            --algorithm 'sha512'" />
     </target>
 
     <target name="plugin-hooks" description="Generates a list of plugin hooks basing on the target file set" depends="copy-clean">
