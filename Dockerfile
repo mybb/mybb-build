@@ -16,7 +16,7 @@ RUN set -ex; \
 	\
 	savedAptMark="$(apt-mark showmanual)"; \
 	\
-	apt-get install -y --no-install-suggests --no-install-recommends \
+	apt-get install -y -qq --no-install-suggests --no-install-recommends \
 		zlib1g-dev \
 	; \
 	\
