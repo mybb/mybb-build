@@ -102,20 +102,20 @@
     <!-- build process -->
     <!-- build process: input analysis -->
     <target name="hardcoded-versions" description="Attempts to read versions hardcoded in source files">
-        <loadfile property="content" file="${sourceDirectory}/inc/class_core.php" />
-        <propertyregex property="version" subject="${content}" pattern="${classCoreVersionRegex}" match="$1" defaultValue="Not found" />
+        <loadfile property="coreClassContent" file="${sourceDirectory}/inc/class_core.php" />
+        <propertyregex property="version" subject="${coreClassContent}" pattern="${classCoreVersionRegex}" match="$1" defaultValue="Not found" override="true" />
         <echo message="Version in inc/class_core.php: ${version}" />
 
-        <loadfile property="content" file="${sourceDirectory}/inc/languages/english.php" />
-        <propertyregex property="version" subject="${content}" pattern="${englishManifestVersionRegex}" match="$1" defaultValue="Not found" />
+        <loadfile property="languageManifestContent" file="${sourceDirectory}/inc/languages/english.php" />
+        <propertyregex property="version" subject="${languageManifestContent}" pattern="${englishManifestVersionRegex}" match="$1" defaultValue="Not found" override="true" />
         <echo message="Version in inc/languages/english.php: ${version}" />
 
-        <loadfile property="content" file="${sourceDirectory}/install/resources/mybb_theme.xml" />
-        <propertyregex property="version" subject="${content}" pattern="${masterThemeManifestVersionRegex}" match="$1" defaultValue="Not found" />
+        <loadfile property="themeManifestContent" file="${sourceDirectory}/install/resources/mybb_theme.xml" />
+        <propertyregex property="version" subject="${themeManifestContent}" pattern="${masterThemeManifestVersionRegex}" match="$1" defaultValue="Not found" override="true" />
         <echo message="Version in install/resources/mybb_theme.xml: ${version}" />
 
-        <loadfile property="content" file="${previousSourceDirectory}/inc/class_core.php" />
-        <propertyregex property="version" subject="${content}" pattern="${classCoreVersionRegex}" match="$1" defaultValue="Not found" />
+        <loadfile property="previousCoreClassContent" file="${previousSourceDirectory}/inc/class_core.php" />
+        <propertyregex property="version" subject="${previousCoreClassContent}" pattern="${classCoreVersionRegex}" match="$1" defaultValue="Not found" override="true" />
         <echo message="Version in previous inc/class_core.php: ${version}" />
     </target>
 
