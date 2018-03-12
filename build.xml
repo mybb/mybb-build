@@ -9,6 +9,7 @@
     <property name="patchesDirectory" value="${project.basedir}/input/patches" />
     <property name="packageAddendumDirectory" value="${project.basedir}/input/package-addendum" />
     <property name="buildDirectory" value="${project.basedir}/build" />
+    <property name="gitDirectory" value="${buildDirectory}/git" />
     <property name="outputDirectory" value="${project.basedir}/output" />
 
     <!-- project settings -->
@@ -21,6 +22,8 @@
     <property name="englishManifestVersionRegex">\$langinfo\['version'\] = "([0-9a-zA-Z.-]+)";</property>
     <property name="masterThemeManifestVersionRegex"><![CDATA[<theme name="MyBB Master Style" version="([0-9a-zA-Z.-]+)">]]></property>
     <property name="changedTemplatesRegex"><![CDATA[<template name="()" version="${targetVersionCode}">]]></property>
+
+    <property name="sourceGitRepository" value="https://github.com/mybb/mybb.git" />
 
     <!-- output settings -->
     <property name="distSetSourceSubdirectory" value="Upload" />
@@ -130,12 +133,29 @@
         <mkdir dir="${distSetDirectory}" />
         <mkdir dir="${distSetSourceDirectory}" />
 
-        <copy todir="${distSetSourceDirectory}" preservelastmodified="true">
-            <fileset dir="${sourceDirectory}">
-                <include name="**" />
-                <patternset refid="dist_excluded_files" />
-            </fileset>
-        </copy>
+        <if>
+            <isset property="sourceRepositoryBranch" />
+            <then>
+                <mkdir dir="${gitDirectory}" />
+
+                <exec dir="${gitDirectory}" command="git clone ${sourceGitRepository} --depth=1 --branch=${sourceRepositoryBranch} ./" checkreturn="true" />
+
+                <copy todir="${distSetSourceDirectory}" preservelastmodified="true">
+                    <fileset dir="${gitDirectory}">
+                        <include name="**" />
+                        <patternset refid="dist_excluded_files" />
+                    </fileset>
+                </copy>
+            </then>
+            <else>
+                <copy todir="${distSetSourceDirectory}" preservelastmodified="true">
+                    <fileset dir="${sourceDirectory}">
+                        <include name="**" />
+                        <patternset refid="dist_excluded_files" />
+                    </fileset>
+                </copy>
+            </else>
+        </if>
     </target>
 
     <target name="chmod" description="Applies file permissions to the target set" depends="copy-clean">
