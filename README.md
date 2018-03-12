@@ -14,10 +14,10 @@ A Docker image [is built](https://github.com/mybb/mybb-build/blob/master/Dockerf
 
 **It is recommended to run the tools with at least 2048 MB of memory available to PHP and external tools.**
 
-1. Fetch the repository.
-2. Place source files according to the description above.
+1. Clone the repository.
+2. Prepare `input/` files according to the Directory Structure above.
 
-   The build source can be also fetched from the `mybb/mybb` repository automatically if a branch is specified in `input/build.properties`.
+   The build source can be also fetched from the `mybb/mybb` repository automatically if a branch (or tag) is specified in `input/build.properties`.
 
 2. Build the Docker image:
 ```
@@ -25,13 +25,13 @@ $ docker-compose build
 ```
 
 3. Run the built `phing` service and execute:
-  - the `dist-set` task to build the release package only:
+   - the `dist-set` task to build the release package only:
 
     ```
     $ docker-compose run phing dist-set
     ```
 
-  - the `full` task to build the release and update packages:
+   - the `full` task to build the release and update packages:
 
     ```
     $ docker-compose run phing full
