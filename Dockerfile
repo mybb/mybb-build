@@ -54,7 +54,10 @@ RUN chmod +x phing-fetch.sh; \
 	chmod +x /usr/local/bin/phing;
 
 # Set custom PHP configuration directives
-COPY ./php-additional.ini /usr/local/etc/php/conf.d/php-additional.ini
+RUN { \
+	echo 'memory_limit=2G'; \
+	echo 'include_path=".:/usr/local/lib/php"'; \
+	} > /usr/local/etc/php/conf.d/php-custom.ini
 
 # Add build scripts
 COPY ./php/ ./php/
