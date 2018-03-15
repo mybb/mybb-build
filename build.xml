@@ -99,36 +99,16 @@
     <property name="distSetSourceDirectory" value="${distSetDirectory}/${distSetSourceSubdirectory}" />
 
     <!-- group tasks -->
-    <target name="dist-set" description="Executes tasks to build the distribution package" depends="hardcoded-versions,prepare,copy-clean,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,addendum,package,package-determinism,package-checksums,version-data,output" />
-    <target name="full" description="Executes tasks to build both distribution and update packages" depends="hardcoded-versions,prepare,copy-clean,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,updateset,updateset-install-directory,changed-templates,addendum,package,updateset-package,package-determinism,updateset-package-determinism,package-checksums,updateset-package-checksums,version-data,output" />
+    <target name="dist-set" description="Executes tasks to build the distribution package" depends="prepare,copy-clean,hardcoded-versions,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,addendum,package,package-determinism,package-checksums,version-data,output" />
+    <target name="full" description="Executes tasks to build both distribution and update packages" depends="prepare,copy-clean,hardcoded-versions,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,updateset,updateset-install-directory,changed-templates,addendum,package,updateset-package,package-determinism,updateset-package-determinism,package-checksums,updateset-package-checksums,version-data,output" />
 
     <!-- build process -->
-    <!-- build process: input analysis -->
-    <target name="hardcoded-versions" description="Attempts to read versions hardcoded in source files">
-        <loadfile property="coreClassContent" file="${sourceDirectory}/inc/class_core.php" />
-        <propertyregex property="version" subject="${coreClassContent}" pattern="${classCoreVersionRegex}" match="$1" defaultValue="Not found" override="true" />
-        <echo message="Version in inc/class_core.php: ${version}" />
-
-        <loadfile property="languageManifestContent" file="${sourceDirectory}/inc/languages/english.php" />
-        <propertyregex property="version" subject="${languageManifestContent}" pattern="${englishManifestVersionRegex}" match="$1" defaultValue="Not found" override="true" />
-        <echo message="Version in inc/languages/english.php: ${version}" />
-
-        <loadfile property="themeManifestContent" file="${sourceDirectory}/install/resources/mybb_theme.xml" />
-        <propertyregex property="version" subject="${themeManifestContent}" pattern="${masterThemeManifestVersionRegex}" match="$1" defaultValue="Not found" override="true" />
-        <echo message="Version in install/resources/mybb_theme.xml: ${version}" />
-
-        <loadfile property="previousCoreClassContent" file="${previousSourceDirectory}/inc/class_core.php" />
-        <propertyregex property="version" subject="${previousCoreClassContent}" pattern="${classCoreVersionRegex}" match="$1" defaultValue="Not found" override="true" />
-        <echo message="Version in previous inc/class_core.php: ${version}" />
-    </target>
-
     <!-- build process: output preparation -->
     <target name="prepare" description="Creates an empty directory for build files">
         <delete dir="${buildDirectory}" quiet="true" />
         <mkdir dir="${buildDirectory}" />
     </target>
 
-    <!-- build process: distribution set operations -->
     <target name="copy-clean" description="Copies files intended for distribution sets" depends="prepare">
         <mkdir dir="${distSetDirectory}" />
         <mkdir dir="${distSetSourceDirectory}" />
@@ -160,6 +140,31 @@
         </if>
     </target>
 
+    <!-- build process: input analysis -->
+    <target name="hardcoded-versions" description="Attempts to read versions hardcoded in source files">
+        <if>
+            <available file="${previousSourceDirectory}/inc/class_core.php" type="file" />
+            <then>
+                <loadfile property="previousCoreClassContent" file="${previousSourceDirectory}/inc/class_core.php" />
+                <propertyregex property="version" subject="${previousCoreClassContent}" pattern="${classCoreVersionRegex}" match="$1" defaultValue="Not found" override="true" />
+                <echo message="Version in previous inc/class_core.php: ${version}" />
+            </then>
+        </if>
+
+        <loadfile property="coreClassContent" file="${distSetSourceDirectory}/inc/class_core.php" />
+        <propertyregex property="version" subject="${coreClassContent}" pattern="${classCoreVersionRegex}" match="$1" defaultValue="Not found" override="true" />
+        <echo message="Version in inc/class_core.php: ${version}" />
+
+        <loadfile property="languageManifestContent" file="${distSetSourceDirectory}/inc/languages/english.php" />
+        <propertyregex property="version" subject="${languageManifestContent}" pattern="${englishManifestVersionRegex}" match="$1" defaultValue="Not found" override="true" />
+        <echo message="Version in inc/languages/english.php: ${version}" />
+
+        <loadfile property="themeManifestContent" file="${distSetSourceDirectory}/install/resources/mybb_theme.xml" />
+        <propertyregex property="version" subject="${themeManifestContent}" pattern="${masterThemeManifestVersionRegex}" match="$1" defaultValue="Not found" override="true" />
+        <echo message="Version in install/resources/mybb_theme.xml: ${version}" />
+    </target>
+
+    <!-- build process: distribution set operations -->
     <target name="chmod" description="Applies file permissions to the target set" depends="copy-clean">
         <chmod mode="0777" verbose="false">
             <fileset dir="${distSetSourceDirectory}">
