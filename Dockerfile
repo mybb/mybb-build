@@ -47,10 +47,11 @@ WORKDIR /home/user/
 
 # Install Phing
 COPY ./phing-fetch.sh ./phing-fetch.sh
-RUN chmod +x phing-fetch.sh
-RUN ./phing-fetch.sh
-RUN cp phing-latest.phar /usr/local/bin/phing
-RUN chmod +x /usr/local/bin/phing
+RUN chmod +x phing-fetch.sh; \
+	./phing-fetch.sh; \
+	rm -f ./phing-fetch.sh; \
+	cp phing-latest.phar /usr/local/bin/phing; \
+	chmod +x /usr/local/bin/phing;
 
 # Set custom PHP configuration directives
 COPY ./php-additional.ini /usr/local/etc/php/conf.d/php-additional.ini
