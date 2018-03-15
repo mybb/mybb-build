@@ -161,21 +161,21 @@
     </target>
 
     <target name="chmod" description="Applies file permissions to the target set" depends="copy-clean">
-        <chmod mode="0777">
+        <chmod mode="0777" verbose="false">
             <fileset dir="${distSetSourceDirectory}">
                 <selector refid="writable_directories" />
                 <type type="dir" />
             </fileset>
         </chmod>
 
-        <chmod mode="0666">
+        <chmod mode="0666" verbose="false">
             <fileset dir="${distSetSourceDirectory}">
                 <selector refid="writable_files" />
                 <type type="file" />
             </fileset>
         </chmod>
 
-        <chmod mode="0644">
+        <chmod mode="0644" verbose="false">
             <fileset dir="${distSetSourceDirectory}">
                 <include name="**" />
                 <not>
