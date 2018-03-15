@@ -66,7 +66,11 @@ RUN chmod +x ./php/*.php
 # Add Phing project build file
 COPY ./build.xml ./build.xml
 
+# Add entrypoint script
+COPY ./docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x docker-entrypoint.sh
+
 # Switch to the added user
 USER user
 
-ENTRYPOINT ["phing"]
+ENTRYPOINT ["./docker-entrypoint.sh"]

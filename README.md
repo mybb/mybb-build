@@ -37,12 +37,6 @@ $ docker-compose build
     $ docker-compose run phing full
     ```
 
-  Alternatively, to save the build log as `output/build.log` (with formatting tags stripped), you can redirect the output to a file:
-
-  ```
-  $ docker-compose run phing full |& sed 's/\x1b\[[0-9;]*m//g' | tee build.log && cp build.log output/build.log
-  ```
-
 ## Build Environment
 
 The built `phing` service, with volumes `sources/` (read-only) and `output/` mounted to `/home/user/`, passes subsequent `docker-compose run` arguments to `phing` (the PHP build script).
