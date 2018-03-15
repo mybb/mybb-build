@@ -138,7 +138,9 @@
             <then>
                 <mkdir dir="${gitDirectory}" />
 
-                <exec dir="${gitDirectory}" command="git clone ${sourceGitRepository} --depth=1 --branch=${sourceRepositoryBranch} ./" checkreturn="true" />
+                <property name="gitCloneCommand" value="git clone ${sourceGitRepository} --depth=1 --branch=${sourceRepositoryBranch} ./" />
+                <echo message="${gitCloneCommand}" />
+                <exec dir="${gitDirectory}" command="${gitCloneCommand}" checkreturn="true" />
 
                 <copy todir="${distSetSourceDirectory}" preservelastmodified="true">
                     <fileset dir="${gitDirectory}">
