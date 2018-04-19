@@ -10,7 +10,7 @@ RUN set -e; \
 	apt-get -qq update; \
 	\
 	# Install required packages
-	apt-get install -y -qq --no-install-suggests --no-install-recommends \
+	apt-get install -qq --no-install-suggests --no-install-recommends \
 		software-properties-common \
 		python3-software-properties \
 		git \
