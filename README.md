@@ -26,10 +26,13 @@ $ docker-compose build
   - The build source can be also fetched from the `mybb/mybb` repository automatically if a branch (or tag) is specified in `input/build.properties`.
 
   - Additional files can be fetched automatically from a data repository and the same branch name specified in `input/build.properties`:
+
     1. Create a `secrets.env` file in the `mybb-build` directory with the data repository URL variable:
-  ```
-  INPUT_FILES_REPOSITORY=ssh://git@github.com/mybb/...
-  ```
+
+    ```
+    INPUT_FILES_REPOSITORY=ssh://git@github.com/mybb/...
+    ```
+
     2. Create a Deploy key and add/ask to add it to the data repository and place the private key file (`id_ed25519`, `id_rsa`, etc.) in `secrets/`. Files within this directory will be copied into the container and configured as a SSH key to use when pulling data in the `remote-data` task.
 
 
