@@ -4,6 +4,9 @@ services:
     image: mybb-build
     build:
       context: ${PWD}
+    env_file:
+      - secrets.env
     volumes:
-      - ${PWD}/input:/home/user/input/:ro
+      - ${PWD}/input:/home/user/input/
       - ${PWD}/output:/home/user/output/
+      - ${PWD}/secrets:/home/user/secrets/:ro

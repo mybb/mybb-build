@@ -18,6 +18,7 @@ RUN set -e; \
 		unzip \
 		wget \
 		strip-nondeterminism \
+		ssh \
 		> /dev/null; \
 	\
 	docker-php-ext-configure zip --with-libzip \
@@ -72,5 +73,7 @@ RUN chmod +x docker-entrypoint.sh
 
 # Switch to the added user
 USER user
+
+ENV GIT_TERMINAL_PROMPT=0
 
 ENTRYPOINT ["./docker-entrypoint.sh"]

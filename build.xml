@@ -36,7 +36,7 @@
     <property name="distPluginHooksFilePrefix" value="18_plugin_hooks" />
 
     <!-- files to exclude when copying files for distribution packages -->
-    <patternset id="dist_excluded_files">
+    <patternset id="meta_files">
         <exclude name="**/.git/**"></exclude>
         <exclude name="**/.DS_Store"></exclude>
         <exclude name="**/.DS_Store?"></exclude>
@@ -100,14 +100,37 @@
     <property name="distSetSourceDirectory" value="${distSetDirectory}/${distSetSourceSubdirectory}" />
 
     <!-- group tasks -->
-    <target name="dist-set" description="Executes tasks to build the distribution package" depends="prepare,copy-clean,hardcoded-versions,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,addendum,package,package-determinism,package-checksums,version-data,output" />
-    <target name="full" description="Executes tasks to build both distribution and update packages" depends="prepare,copy-clean,hardcoded-versions,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,updateset,updateset-install-directory,changed-templates,addendum,package,updateset-package,package-determinism,updateset-package-determinism,package-checksums,updateset-package-checksums,version-data,output" />
+    <target name="dist-set" description="Executes tasks to build the distribution package" depends="remote-data,prepare,copy-clean,hardcoded-versions,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,addendum,package,package-determinism,package-checksums,version-data,output" />
+    <target name="full" description="Executes tasks to build both distribution and update packages" depends="remote-data,prepare,copy-clean,hardcoded-versions,chmod,patch,normalize-eol,dist-checksums,plugin-hooks,updateset,updateset-install-directory,changed-templates,addendum,package,updateset-package,package-determinism,updateset-package-determinism,package-checksums,updateset-package-checksums,version-data,output" />
 
     <!-- build process -->
     <!-- build process: output preparation -->
     <target name="prepare" description="Creates an empty directory for build files">
         <delete dir="${buildDirectory}" quiet="true" />
         <mkdir dir="${buildDirectory}" />
+    </target>
+
+    <!-- build process: input preparation -->
+    <target name="remote-data" description="Fetches additional build files from specified repository">
+        <if>
+            <not>
+                <equals arg1="${env.INPUT_FILES_REPOSITORY}" arg2="" />
+            </not>
+            <then>
+                <mkdir dir="${gitDirectory}" />
+
+                <exec dir="${gitDirectory}" command="git clone ${env.INPUT_FILES_REPOSITORY} --depth=1 --branch=${sourceRepositoryBranch} ./" />
+
+                <copy todir="${project.basedir}" preservelastmodified="true">
+                    <fileset dir="${gitDirectory}">
+                        <include name="**" />
+                        <patternset refid="meta_files" />
+                    </fileset>
+                </copy>
+
+                <delete dir="${gitDirectory}" />
+            </then>
+        </if>
     </target>
 
     <target name="copy-clean" description="Copies files intended for distribution sets" depends="prepare">
@@ -126,15 +149,17 @@
                 <copy todir="${distSetSourceDirectory}" preservelastmodified="true">
                     <fileset dir="${gitDirectory}">
                         <include name="**" />
-                        <patternset refid="dist_excluded_files" />
+                        <patternset refid="meta_files" />
                     </fileset>
                 </copy>
+
+                <delete dir="${gitDirectory}" />
             </then>
             <else>
                 <copy todir="${distSetSourceDirectory}" preservelastmodified="true">
                     <fileset dir="${sourceDirectory}">
                         <include name="**" />
-                        <patternset refid="dist_excluded_files" />
+                        <patternset refid="meta_files" />
                     </fileset>
                 </copy>
             </else>
@@ -264,13 +289,13 @@
 
         <fileset dir="${distSetSourceDirectory}" id="distFiles">
             <include name="**" />
-            <patternset refid="dist_excluded_files" />
+            <patternset refid="meta_files" />
         </fileset>
         <pathconvert pathsep="," property="distFilesCsv" refid="distFiles" />
 
         <fileset dir="${previousSourceDirectory}" id="previousFiles">
             <include name="**" />
-            <patternset refid="dist_excluded_files" />
+            <patternset refid="meta_files" />
         </fileset>
         <pathconvert pathsep="," property="previousFilesCsv" refid="previousFiles" />
 
@@ -297,7 +322,7 @@
                 <copy todir="${updateSetDirectory}/${installPackageSubdirectory}" preservelastmodified="true">
                     <fileset dir="${distSetSourceDirectory}/${installPackageSubdirectory}">
                         <include name="**" />
-                        <patternset refid="dist_excluded_files" />
+                        <patternset refid="meta_files" />
                     </fileset>
                 </copy>
             </then>
