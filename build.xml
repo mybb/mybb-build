@@ -119,7 +119,7 @@
             <then>
                 <mkdir dir="${gitDirectory}" />
 
-                <exec dir="${gitDirectory}" command="git clone ${env.INPUT_FILES_REPOSITORY} --depth=1 --branch=${sourceRepositoryBranch} ./" />
+                <exec dir="${gitDirectory}" command="git clone ${env.INPUT_FILES_REPOSITORY} --depth=1 --branch=${sourceRepositoryBranch} ./" checkreturn="true" />
 
                 <copy todir="${project.basedir}" preservelastmodified="true">
                     <fileset dir="${gitDirectory}">
