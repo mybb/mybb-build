@@ -218,13 +218,18 @@
     </target>
 
     <target name="patch" description="Applies attached git patches to the target file set" depends="copy-clean">
-        <apply executable="git" dir="${distSetSourceDirectory}">
-            <arg value="apply" />
-            <arg value="--ignore-whitespace" />
-            <fileset dir="${patchesDirectory}">
-                <include name="**" />
-            </fileset>
-        </apply>
+        <if>
+            <available file="${patchesDirectory}" type="dir" />
+            <then>
+                <apply executable="git" dir="${distSetSourceDirectory}">
+                    <arg value="apply" />
+                    <arg value="--ignore-whitespace" />
+                    <fileset dir="${patchesDirectory}">
+                        <include name="**" />
+                    </fileset>
+                </apply>
+            </then>
+        </if>
     </target>
 
     <target name="patch-reverse" description="Reverses attached git patches in the target file set" depends="copy-clean">
