@@ -224,6 +224,7 @@
                 <apply executable="git" dir="${distSetSourceDirectory}">
                     <arg value="apply" />
                     <arg value="--ignore-whitespace" />
+                    <arg value="--verbose" />
                     <fileset dir="${patchesDirectory}">
                         <include name="**" />
                     </fileset>
