@@ -53,6 +53,10 @@ foreach ($RecursiveIteratorIterator as $path) {
     }
 }
 
+usort($hooks, function ($a, $b) {
+    return strcmp($a['name'], $b['name']);
+});
+
 $hooksYml = <<<YML
 hooks:
 
