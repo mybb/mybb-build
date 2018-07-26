@@ -48,6 +48,7 @@
         <exclude name=".gitignore"></exclude>
         <exclude name="CODE_OF_CONDUCT.md"></exclude>
         <exclude name="CONTRIBUTING.md"></exclude>
+        <exclude name="SECURITY.md"></exclude>
         <exclude name="LICENSE"></exclude>
         <exclude name="readme.md"></exclude>
         <exclude name="README.md"></exclude>
