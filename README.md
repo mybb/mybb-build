@@ -15,29 +15,34 @@ A Docker image [is built](https://github.com/mybb/mybb-build/blob/master/Dockerf
 
 **It is recommended to run the tools with at least 2048 MB of memory available to PHP and external tools.**
 
-1. Clone the repository.
+1. #### Clone the Builder
+   Clone/download the repository. Make sure old files in `input/` are removed.
 
-2. Build the Docker image:
-```
-$ docker-compose build
-```
+2. #### Prepare Docker Image
+   Build the Docker image in the cloned directory:
 
-3. Prepare `input/` files according to the Directory Structure above.
-  - The build source can be also fetched from the `mybb/mybb` repository automatically if a branch (or tag) is specified in `input/build.properties`.
+   ```
+   $ docker-compose build
+   ```
 
-  - Additional files can be fetched automatically from a data repository and the same branch name specified in `input/build.properties`:
+3. #### Prepare Input Files
+   For reproducing packages, use the provided `input/` content.
 
-    1. Create a `secrets.env` file in the `mybb-build` directory with the data repository URL variable:
+   For building from scratch:
+   - Adjust `input/build.properties` values.
 
-    ```
-    INPUT_FILES_REPOSITORY=ssh://git@github.com/mybb/...
-    ```
+   - If applicable, place additional files that can be fetched automatically from a data repository at branch specified in `input/build.properties`:
+
+    1. Create a `secrets.env` file in the main directory with the data repository URL variable:
+
+       ```
+       INPUT_FILES_REPOSITORY=ssh://git@github.com/mybb/...
+       ```
 
     2. Create a Deploy key and add/ask to add it to the data repository and place the private key file (`id_ed25519`, `id_rsa`, etc.) in `secrets/`. Files within this directory will be copied into the container and configured as a SSH key to use when pulling data in the `remote-data` task.
 
-
-
-3. Run the built `phing` service and execute:
+4. #### Build Packages
+   Run the built `phing` service and execute:
    - the `dist-set` task to build the release package only:
 
     ```
@@ -49,6 +54,8 @@ $ docker-compose build
     ```
     $ docker-compose run phing full
     ```
+
+If you believe you found discrepancies when reproducing packages, [contact the MyBB security team](https://mybb.com/get-involved/security/).
 
 ## Build Environment
 
