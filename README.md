@@ -45,15 +45,15 @@ A Docker image [is built](https://github.com/mybb/mybb-build/blob/master/Dockerf
    Run the built `phing` service and execute:
    - the `dist-set` task to build the release package only:
 
-    ```
-    $ docker-compose run phing dist-set
-    ```
+     ```
+     $ docker-compose run phing dist-set
+     ```
 
    - the `full` task to build the release and update packages:
 
-    ```
-    $ docker-compose run phing full
-    ```
+     ```
+     $ docker-compose run phing full
+     ```
 
 If you believe you found discrepancies when reproducing packages, [contact the MyBB security team](https://mybb.com/get-involved/security/).
 
