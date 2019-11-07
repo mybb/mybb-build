@@ -30,13 +30,12 @@ A Docker image [is built](https://github.com/mybb/mybb-build/blob/master/Dockerf
 
    For building from scratch:
    - Adjust `input/build.properties` values.
-
    - If applicable, place additional files that can be fetched automatically from a data repository at branch specified in `input/build.properties`:
 
      1. Create a `secrets.env` file in the main directory with the data repository URL variable:
 
         ```
-        INPUT_FILES_REPOSITORY=ssh://git@github.com/mybb/...
+        INPUT_FILES_REPOSITORY=git@github.com/mybb/...
         ```
 
      2. Create a Deploy key and add/ask to add it to the data repository and place the private key file (`id_ed25519`, `id_rsa`, etc.) in `secrets/`. Files within this directory will be copied into the container and configured as a SSH key to use when pulling data in the `remote-data` task.
