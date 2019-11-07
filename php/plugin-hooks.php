@@ -6,6 +6,34 @@ $args = getopt(null, [
     'distPluginHooksFile:',
 ]);
 
+function directoryStructureSort($a, $b) {
+    $aNesting = substr_count($a, '/');
+    $bNesting = substr_count($b, '/');
+
+    if ($aNesting == 0 && $bNesting == 0) {
+        return strnatcmp($a, $b);
+    } elseif ($aNesting == 0) {
+        return 1;
+    } elseif ($bNesting == 0) {
+        return -1;
+    } else {
+        $aParents = array_slice(explode('/', $a), 0, -1);
+        $bParents = array_slice(explode('/', $b), 0, -1);
+
+        foreach ($aParents as $order => $name) {
+            if (isset($bParents[$order])) {
+                if ($name != $bParents[$order]) {
+                    return strnatcmp($name, $bParents[$order]);
+                }
+            } else {
+                return -1;
+            }
+        }
+
+        return strnatcmp($a, $b);
+    }
+}
+
 $hooks = [];
 
 $realpath = realpath($args['distSetSourceDirectory']);
@@ -52,6 +80,16 @@ foreach ($RecursiveIteratorIterator as $path) {
         }
     }
 }
+
+usort($hooks, function ($a, $b) {
+    $pathComparison = directoryStructureSort($a['file'], $b['file']);
+
+    if ($pathComparison == 0) {
+        return $a['line'] - $b['line'];
+    } else {
+        return $pathComparison;
+    }
+});
 
 $hooksYml = <<<YML
 hooks:

@@ -56,7 +56,7 @@ function directoryStructureSort($a, $b) {
             }
         }
 
-        return 0;
+        return strnatcmp($a, $b);
     }
 }
 

@@ -10,6 +10,7 @@
     <property name="packageAddendumDirectory" value="${project.basedir}/input/package-addendum" />
     <property name="buildDirectory" value="${project.basedir}/build" />
     <property name="gitDirectory" value="${buildDirectory}/git" />
+    <property name="previousSourceDirectoryInternal" value="${buildDirectory}/previous-source" />
     <property name="outputDirectory" value="${project.basedir}/output" />
 
     <!-- project settings -->
@@ -46,10 +47,13 @@
         <exclude name="**/ehthumbs.db"></exclude>
         <exclude name="**/Thumbs.db"></exclude>
         <exclude name=".gitignore"></exclude>
+        <exclude name="**/.gitkeep"></exclude>
         <exclude name="CODE_OF_CONDUCT.md"></exclude>
         <exclude name="CONTRIBUTING.md"></exclude>
+        <exclude name="SECURITY.md"></exclude>
         <exclude name="LICENSE"></exclude>
         <exclude name="readme.md"></exclude>
+        <exclude name="README.md"></exclude>
     </patternset>
 
     <!-- files with varying EOL encoding -->
@@ -136,13 +140,14 @@
     <target name="copy-clean" description="Copies files intended for distribution sets" depends="prepare">
         <mkdir dir="${distSetDirectory}" />
         <mkdir dir="${distSetSourceDirectory}" />
+        <mkdir dir="${previousSourceDirectoryInternal}" />
 
         <if>
             <isset property="sourceRepositoryBranch" />
             <then>
                 <mkdir dir="${gitDirectory}" />
 
-                <property name="gitCloneCommand" value="git clone ${sourceGitRepository} --depth=1 --branch=${sourceRepositoryBranch} ./" />
+                <property name="gitCloneCommand" value="git clone ${sourceGitRepository} --depth=1 --branch=${sourceRepositoryBranch} ./" override="true" />
                 <echo message="${gitCloneCommand}" />
                 <exec dir="${gitDirectory}" command="${gitCloneCommand}" checkreturn="true" />
 
@@ -164,14 +169,42 @@
                 </copy>
             </else>
         </if>
+
+        <if>
+            <isset property="previousSourceRepositoryBranch" />
+            <then>
+                <mkdir dir="${gitDirectory}" />
+
+                <property name="gitCloneCommand" value="git clone ${sourceGitRepository} --depth=1 --branch=${previousSourceRepositoryBranch} ./" override="true" />
+                <echo message="${gitCloneCommand}" />
+                <exec dir="${gitDirectory}" command="${gitCloneCommand}" checkreturn="true" />
+
+                <copy todir="${previousSourceDirectoryInternal}" preservelastmodified="true">
+                    <fileset dir="${gitDirectory}">
+                        <include name="**" />
+                        <patternset refid="meta_files" />
+                    </fileset>
+                </copy>
+
+                <delete dir="${gitDirectory}" />
+            </then>
+            <else>
+                <copy todir="${previousSourceDirectoryInternal}" preservelastmodified="true">
+                    <fileset dir="${previousSourceDirectory}">
+                        <include name="**" />
+                        <patternset refid="meta_files" />
+                    </fileset>
+                </copy>
+            </else>
+        </if>
     </target>
 
     <!-- build process: input analysis -->
     <target name="hardcoded-versions" description="Attempts to read versions hardcoded in source files">
         <if>
-            <available file="${previousSourceDirectory}/inc/class_core.php" type="file" />
+            <available file="${previousSourceDirectoryInternal}/inc/class_core.php" type="file" />
             <then>
-                <loadfile property="previousCoreClassContent" file="${previousSourceDirectory}/inc/class_core.php" />
+                <loadfile property="previousCoreClassContent" file="${previousSourceDirectoryInternal}/inc/class_core.php" />
                 <propertyregex property="version" subject="${previousCoreClassContent}" pattern="${classCoreVersionRegex}" match="$1" defaultValue="Not found" override="true" />
                 <echo message="Version in previous inc/class_core.php: ${version}" />
             </then>
@@ -224,6 +257,7 @@
                 <apply executable="git" dir="${distSetSourceDirectory}">
                     <arg value="apply" />
                     <arg value="--ignore-whitespace" />
+                    <arg value="--verbose" />
                     <fileset dir="${patchesDirectory}">
                         <include name="**" />
                     </fileset>
@@ -298,7 +332,7 @@
         </fileset>
         <pathconvert pathsep="," property="distFilesCsv" refid="distFiles" />
 
-        <fileset dir="${previousSourceDirectory}" id="previousFiles">
+        <fileset dir="${previousSourceDirectoryInternal}" id="previousFiles">
             <include name="**" />
             <patternset refid="meta_files" />
         </fileset>
@@ -309,7 +343,7 @@
         <exec passthru="true" command="php php/updateset.php
             --distFilesCsv '${distFilesCsv}'
             --previousFilesCsv '${previousFilesCsv}'
-            --previousSourceDirectory '${previousSourceDirectory}'
+            --previousSourceDirectory '${previousSourceDirectoryInternal}'
             --distSetSourceDirectory '${distSetSourceDirectory}'
             --outputDirectory '${updateSetDirectory}'
             --distChangedFilesFile '${distChangedFilesFile}'
