@@ -39,6 +39,7 @@
     <!-- files to exclude when copying files for distribution packages -->
     <patternset id="meta_files">
         <exclude name="**/.git/**"></exclude>
+        <exclude name="**/.github/**"></exclude>
         <exclude name="**/.DS_Store"></exclude>
         <exclude name="**/.DS_Store?"></exclude>
         <exclude name="**/._*"></exclude>
