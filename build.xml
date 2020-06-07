@@ -34,7 +34,7 @@
     <property name="distChangedFilesFilePrefix" value="changed_files_list_" />
     <property name="distRemovedFilesFilePrefix" value="removed_files_list_" />
     <property name="distChangedTemplatesFilePrefix" value="changed_templates_list_" />
-    <property name="distPluginHooksFilePrefix" value="18_plugin_hooks" />
+    <property name="distPluginHooksFilePrefix" value="mybb18_plugin_hooks" />
 
     <!-- files to exclude when copying files for distribution packages -->
     <patternset id="meta_files">
