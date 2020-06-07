@@ -1,8 +1,10 @@
 /build
-/secrets
-/sources/patch
-/sources/previous-clean-source
-/sources/raw-source
+/input/source/
+/input/previous-source/
+/input/patches/
+/input/package-addendum/
+/output
 /phing.phar
 /phing-latest.phar
+/secrets
 /secrets.env
