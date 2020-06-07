@@ -1,4 +1,4 @@
-FROM php:7.2-cli
+FROM php:7.4-cli
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -21,8 +21,6 @@ RUN set -e; \
 		ssh \
 		> /dev/null; \
 	\
-	docker-php-ext-configure zip --with-libzip \
-		> /dev/null; \
 	docker-php-ext-install zip \
 		> /dev/null; \
 	\
