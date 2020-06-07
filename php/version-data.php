@@ -11,7 +11,17 @@ $args = getopt(null, [
     'updateSetName:',
     'targetVersion:',
     'targetVersionCode:',
+    'githubRepository:',
+    'githubMilestoneNumber:',
     'distVersionDataFile:',
+]);
+
+define('MY_USERAGENT', 'mybb/mybb-build');
+define('DEFAULT_CURLOPTS', [
+    CURLOPT_USERAGENT => MY_USERAGENT,
+    CURLOPT_TIMEOUT => 10,
+    CURLOPT_RETURNTRANSFER => 1,
+    CURLOPT_SSL_VERIFYPEER => 1,
 ]);
 
 function arrayToYml($array, $level = 1)
@@ -58,6 +68,94 @@ function directoryStructureSort($a, $b) {
 
         return strnatcmp($a, $b);
     }
+}
+
+function fetchJson($ch, $path) {
+    $curlopt = [
+        CURLOPT_URL => $path,
+    ] + DEFAULT_CURLOPTS;
+
+    curl_setopt_array($ch, $curlopt);
+
+    $response = curl_exec($ch);
+
+    $data = json_decode($response, true);
+
+    if ($data === null) {
+        return null;
+    }
+
+    return $data;
+}
+
+function getIssueStats($ch, $githubApiPath, $milestoneNumber) {
+    $issueAges = [];
+    $page = 1;
+
+    $curlopt = [
+        CURLOPT_HEADER => 1,
+    ] + DEFAULT_CURLOPTS;
+
+    while ($page !== null) {
+        $curlopt[CURLOPT_URL] = $githubApiPath . 'issues?milestone=' . $milestoneNumber . '&state=closed&per_page=100&page=' . $page;
+
+        curl_setopt_array($ch, $curlopt);
+
+        $response = curl_exec($ch);
+
+        $header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        $header = substr($response, 0, $header_size);
+        $body = substr($response, $header_size);
+
+        $issues = json_decode($body, true);
+
+        if ($issues === null) {
+            break;
+        }
+
+        foreach ($issues as $issue) {
+            if (empty($issue['closed_at']) || !empty($issue['pull_request'])) {
+                continue;
+            }
+            $created = DateTime::createFromFormat(DateTime::ISO8601, $issue['created_at']);
+            $closed = DateTime::createFromFormat(DateTime::ISO8601, $issue['closed_at']);
+
+            if ($created === false || $closed === false) {
+                continue;
+            }
+
+            $interval = $created->diff($closed);
+            $issueAges[] = (int) $interval->format('%a');
+        }
+
+        preg_match('/^Link:(.*?)&page=([0-9]+)>; rel="next"/im', $header, $matches);
+
+        if ($matches) {
+            $page = $matches[2];
+        } else {
+            $page = null;
+        }
+    }
+
+    sort($issueAges);
+
+    $numIssues = count($issueAges);
+
+    if ($numIssues == 0) {
+        return null;
+    }
+
+    if ($numIssues % 2 === 0) {
+        $median = ($issueAges[($numIssues/2)-1] + $issueAges[$numIssues/2]) / 2;
+    } else {
+        $median = $issueAges[intdiv($numIssues, 2)];
+    }
+
+    return [
+        'medianAge' => $median,
+        'meanAge' => round(array_sum($issueAges) / $numIssues, 1),
+        'numIssues' => $numIssues,
+    ];
 }
 
 // changed files YML
@@ -175,6 +273,51 @@ YML;
     }
 }
 
+// resolved issue YML
+$resolvedIssuesYml = null;
+
+$ch = curl_init();
+$githubApiPath = 'https://api.github.com/repos/' . $args['githubRepository'] . '/';
+
+if (empty($args['githubMilestoneNumber']) || ($milestone = fetchJson($ch, $githubApiPath . 'milestones/' . $args['githubMilestoneNumber'])) === null) {
+    // Attempt to determine milestone number ourselves
+    $milestones = fetchJson($ch, $githubApiPath . 'milestones?state=all');
+    if ($milestones !== null) {
+        foreach ($milestones as $m) {
+            if (!empty($m['title']) && $m['title'] === $args['targetVersion']) {
+                $milestone = $m;
+                break;
+            }
+        }
+    }
+}
+
+if ($milestone !== null) {
+    // We have a correct milestone
+    $resolvedIssuesYml = '';
+
+    $issueStats = getIssueStats($ch, $githubApiPath, $milestone['number']);
+
+    if ($issueStats !== null) {
+        $resolvedIssuesYml .= <<<YML
+resolved_issues_number: "{$issueStats['numIssues']}"
+resolved_issues_age_median: "{$issueStats['medianAge']}"
+resolved_issues_age_mean: "{$issueStats['meanAge']}"
+
+YML;
+    }
+
+    $resolvedIssuesMilestone = urlencode($milestone['title']);
+
+    $resolvedIssuesYml .= <<<YML
+resolved_issues_link: "https://github.com/{$args['githubRepository']}/issues?q=is%3Aissue%20is%3Aclosed%20label%3As%3Aresolved%20milestone%3A{$resolvedIssuesMilestone}"
+
+
+YML;
+}
+
+curl_close($ch);
+
 // packages YML
 $distSetPackageSize = round(filesize($args['buildDirectory'] . '/' . $args['distSetName'].'.zip') / 1024 / 1024, 2);
 $updateSetPackageSize = round(filesize($args['buildDirectory'] . '/' . $args['updateSetName'].'.zip') / 1024 / 1024, 2);
@@ -242,7 +385,7 @@ packages:
         filesize: "{$updateSetPackageSize} MB"
         checksums:
 {$updateSetPackageChecksumsYml}
-{$changedLanguageFilesNumberYml}{$changedFilesYml}{$removedFilesYml}{$changedTemplatesYml}
+{$resolvedIssuesYml}{$changedLanguageFilesNumberYml}{$changedFilesYml}{$removedFilesYml}{$changedTemplatesYml}
 ---
 YML;
 

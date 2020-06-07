@@ -25,6 +25,8 @@
     <property name="changedTemplatesRegex"><![CDATA[<template name="()" version="${targetVersionCode}">]]></property>
 
     <property name="sourceGitRepository" value="https://github.com/mybb/mybb.git" />
+    <property name="githubRepository" value="mybb/mybb" />
+    <property name="githubMilestoneNumber" value="" />
 
     <!-- output settings -->
     <property name="distSetSourceSubdirectory" value="Upload" />
@@ -450,6 +452,8 @@
             --updateSetName '${updateSetName}'
             --targetVersion '${targetVersion}'
             --targetVersionCode '${targetVersionCode}'
+            --githubRepository '${githubRepository}'
+            --githubMilestoneNumber '${githubMilestoneNumber}'
             --distVersionDataFile '${distVersionDataFile}'" />
     </target>
 
