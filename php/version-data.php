@@ -11,8 +11,9 @@ $args = getopt(null, [
     'updateSetName:',
     'targetVersion:',
     'targetVersionCode:',
-    'githubRepository:',
-    'githubMilestoneNumber:',
+    'issuesRepository:',
+    'resolvedIssuesMilestone:',
+    'resolvedIssuesLink:',
     'distVersionDataFile:',
 ]);
 
@@ -88,8 +89,8 @@ function fetchJson($ch, $path) {
     return $data;
 }
 
-function getIssueStats($ch, $githubApiPath, $milestoneNumber) {
-    $issueAges = [];
+function fetchJsonPaged($ch, $path, $sep, $callback, $perPage=100) {
+    $results = [];
     $page = 1;
 
     $curlopt = [
@@ -97,7 +98,7 @@ function getIssueStats($ch, $githubApiPath, $milestoneNumber) {
     ] + DEFAULT_CURLOPTS;
 
     while ($page !== null) {
-        $curlopt[CURLOPT_URL] = $githubApiPath . 'issues?milestone=' . $milestoneNumber . '&state=closed&per_page=100&page=' . $page;
+        $curlopt[CURLOPT_URL] = $path . $sep . 'per_page=' . $perPage . '&page=' . $page;
 
         curl_setopt_array($ch, $curlopt);
 
@@ -107,25 +108,19 @@ function getIssueStats($ch, $githubApiPath, $milestoneNumber) {
         $header = substr($response, 0, $header_size);
         $body = substr($response, $header_size);
 
-        $issues = json_decode($body, true);
+        $data = json_decode($body, true);
 
-        if ($issues === null) {
+        if ($data === null) {
             break;
         }
 
-        foreach ($issues as $issue) {
-            if (empty($issue['closed_at']) || !empty($issue['pull_request'])) {
-                continue;
-            }
-            $created = DateTime::createFromFormat(DateTime::ISO8601, $issue['created_at']);
-            $closed = DateTime::createFromFormat(DateTime::ISO8601, $issue['closed_at']);
-
-            if ($created === false || $closed === false) {
+        foreach ($data as $item) {
+            $result = $callback($item);
+            if ($result === null) {
                 continue;
             }
 
-            $interval = $created->diff($closed);
-            $issueAges[] = (int) $interval->format('%a');
+            $results[] = $result;
         }
 
         preg_match('/^Link:(.*?)&page=([0-9]+)>; rel="next"/im', $header, $matches);
@@ -135,6 +130,62 @@ function getIssueStats($ch, $githubApiPath, $milestoneNumber) {
         } else {
             $page = null;
         }
+    }
+
+    return $results;
+}
+
+function getGithubIssueAges($ch, $repo, $resolvedIssuesMilestone) {
+    $githubApiPath = 'https://api.github.com/repos/' . $repo . '/';
+
+    $milestones = fetchJsonPaged($ch, $githubApiPath . 'milestones?state=all', '&', function($item) use ($resolvedIssuesMilestone) {
+        if ($item['title'] === $resolvedIssuesMilestone) {
+            return $item;
+        }
+
+        return null;
+    });
+
+    if (empty($milestones[0])) {
+        return null;
+    }
+
+    $path = $githubApiPath . 'issues?milestone=' . $milestones[0]['number'] . '&state=closed';
+
+    $issueAges = fetchJsonPaged($ch, $path, '&', function($item) {
+        if (empty($item['closed_at']) || !empty($item['pull_request'])) {
+            return null;
+        }
+
+        $created = DateTime::createFromFormat(DateTime::ISO8601, $item['created_at']);
+        $closed = DateTime::createFromFormat(DateTime::ISO8601, $item['closed_at']);
+
+        if ($created === false || $closed === false) {
+            return null;
+        }
+
+        $interval = $created->diff($closed);
+        return (int) $interval->format('%a');
+    });
+
+    return $issueAges;
+}
+
+function getIssuesData($ch, $issuesRepository, $resolvedIssuesMilestone) {
+    $parsed = parse_url($issuesRepository);
+
+    if ($parsed === false) {
+        return null;
+    }
+
+    $repo = trim(preg_replace('/\.git$/', '', $parsed['path']), '/');
+
+    switch ($parsed['host']) {
+        case 'github.com':
+            $issueAges = getGithubIssueAges($ch, $repo, $resolvedIssuesMilestone);
+        break;
+        default:
+            return null;
     }
 
     sort($issueAges);
@@ -274,47 +325,26 @@ YML;
 }
 
 // resolved issue YML
-$resolvedIssuesYml = null;
+$resolvedIssuesYml = '';
 
 $ch = curl_init();
-$githubApiPath = 'https://api.github.com/repos/' . $args['githubRepository'] . '/';
 
-if (empty($args['githubMilestoneNumber']) || ($milestone = fetchJson($ch, $githubApiPath . 'milestones/' . $args['githubMilestoneNumber'])) === null) {
-    // Attempt to determine milestone number ourselves
-    $milestones = fetchJson($ch, $githubApiPath . 'milestones?state=all');
-    if ($milestones !== null) {
-        foreach ($milestones as $m) {
-            if (!empty($m['title']) && $m['title'] === $args['targetVersion']) {
-                $milestone = $m;
-                break;
-            }
-        }
-    }
-}
+$issuesData = getIssuesData($ch, $args['issuesRepository'], $args['resolvedIssuesMilestone']);
 
-if ($milestone !== null) {
-    // We have a correct milestone
-    $resolvedIssuesYml = '';
-
-    $issueStats = getIssueStats($ch, $githubApiPath, $milestone['number']);
-
-    if ($issueStats !== null) {
-        $resolvedIssuesYml .= <<<YML
-resolved_issues_number: "{$issueStats['numIssues']}"
-resolved_issues_age_median: "{$issueStats['medianAge']}"
-resolved_issues_age_mean: "{$issueStats['meanAge']}"
-
-YML;
-    }
-
-    $resolvedIssuesMilestone = urlencode($milestone['title']);
-
+if ($issuesData !== null) {
     $resolvedIssuesYml .= <<<YML
-resolved_issues_link: "https://github.com/{$args['githubRepository']}/issues?q=is%3Aissue%20is%3Aclosed%20label%3As%3Aresolved%20milestone%3A{$resolvedIssuesMilestone}"
-
+resolved_issues_number: "{$issuesData['numIssues']}"
+resolved_issues_age_median: "{$issuesData['medianAge']}"
+resolved_issues_age_mean: "{$issuesData['meanAge']}"
 
 YML;
 }
+
+$resolvedIssuesYml .= <<<YML
+resolved_issues_link: {$args['resolvedIssuesLink']}"
+
+
+YML;
 
 curl_close($ch);
 
