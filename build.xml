@@ -15,6 +15,7 @@
 
     <!-- project settings -->
     <propertyregex property="targetVersionCode" override="false" subject="${targetVersion}" pattern="[^0-9a-z]" replace="" match="$1" defaultValue="$0" />
+    <property name="inputFilesRepositoryBranch" override="false" value="${sourceRespositoryBranch}" />
 
     <property name="installPackageSubdirectory" value="install" />
     <property name="languageFilesPackageDirectory" value="inc/languages/english/" />
@@ -124,7 +125,7 @@
             <then>
                 <mkdir dir="${gitDirectory}" />
 
-                <exec dir="${gitDirectory}" command="git clone ${env.INPUT_FILES_REPOSITORY} --depth=1 --branch=${sourceRepositoryBranch} ./" checkreturn="true" />
+                <exec dir="${gitDirectory}" command="git clone ${env.INPUT_FILES_REPOSITORY} --depth=1 --branch=${inputFilesRepositoryBranch} ./" checkreturn="true" />
 
                 <copy todir="${project.basedir}" preservelastmodified="true">
                     <fileset dir="${gitDirectory}">
