@@ -32,7 +32,11 @@ function directoryStructureSort($a, $b) {
             }
         }
 
-        return 0;
+        if ($bNesting > $aNesting) {
+            return 1;
+        } else {
+            return strnatcmp($a, $b);
+        }
     }
 }
 
