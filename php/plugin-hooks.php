@@ -1,20 +1,22 @@
 <?php
+declare(strict_types=1);
 
-$args = getopt(null, [
+$args = getopt('', [
     'distSetSourceDirectory:',
     'targetVersionCode:',
     'distPluginHooksFile:',
 ]);
 
-function directoryStructureSort($a, $b) {
+function directoryStructureSort($a, $b)
+{
     $aNesting = substr_count($a, '/');
     $bNesting = substr_count($b, '/');
 
-    if ($aNesting == 0 && $bNesting == 0) {
+    if ($aNesting === 0 && $bNesting === 0) {
         return strnatcmp($a, $b);
-    } elseif ($aNesting == 0) {
+    } elseif ($aNesting === 0) {
         return 1;
-    } elseif ($bNesting == 0) {
+    } elseif ($bNesting === 0) {
         return -1;
     } else {
         $aParents = array_slice(explode('/', $a), 0, -1);
@@ -22,7 +24,7 @@ function directoryStructureSort($a, $b) {
 
         foreach ($aParents as $order => $name) {
             if (isset($bParents[$order])) {
-                if ($name != $bParents[$order]) {
+                if ($name !== $bParents[$order]) {
                     return strnatcmp($name, $bParents[$order]);
                 }
             } else {
@@ -44,15 +46,15 @@ $realpath = realpath($args['distSetSourceDirectory']);
 
 $pattern = '/\$plugins->run_hooks\((\'|")(?<name>[a-zA-Z0-9_]+)\1(?:, ?(?<parameters>[^)]*))*\)/';
 
-$RecursiveDirectoryIterator = new RecursiveDirectoryIterator($realpath);
-$RecursiveIteratorIterator = new RecursiveIteratorIterator($RecursiveDirectoryIterator);
+$recursiveDirectoryIterator = new RecursiveDirectoryIterator($realpath);
+$recursiveIteratorIterator = new RecursiveIteratorIterator($recursiveDirectoryIterator);
 
-foreach ($RecursiveIteratorIterator as $path) {
-    if (is_file($path) && pathinfo($path, PATHINFO_EXTENSION) == 'php') {
-        $pathNormalized = str_replace($realpath . DIRECTORY_SEPARATOR, null, $path);
+foreach ($recursiveIteratorIterator as $fileInfo) {
+    if ($fileInfo->isFile() && $fileInfo->getExtension() === 'php') {
+        $pathNormalized = str_replace($realpath . DIRECTORY_SEPARATOR, null, $fileInfo->getRealPath());
         $pathNormalized = str_replace('\\', '/', $pathNormalized);
 
-        $fileHandle = fopen($path, 'r');
+        $fileHandle = fopen($fileInfo->getRealPath(), 'r');
 
         if ($fileHandle) {
             $lineNumber = 0;
@@ -88,7 +90,7 @@ foreach ($RecursiveIteratorIterator as $path) {
 usort($hooks, function ($a, $b) {
     $pathComparison = directoryStructureSort($a['file'], $b['file']);
 
-    if ($pathComparison == 0) {
+    if ($pathComparison === 0) {
         return $a['line'] - $b['line'];
     } else {
         return $pathComparison;
@@ -107,8 +109,8 @@ foreach ($hooks as $hook) {
 
 YML;
 
-        foreach ($hook['parameters'] as $paramater) {
-            $parameterEscaped = addcslashes($paramater, '"');
+        foreach ($hook['parameters'] as $parameter) {
+            $parameterEscaped = addcslashes($parameter, '"');
 
             $parametersYml .= <<<YML
       - "{$parameterEscaped}"

@@ -1,6 +1,7 @@
 <?php
+declare(strict_types=1);
 
-$args = getopt(null, [
+$args = getopt('', [
     'path:',
     'algorithms:',
 ]);

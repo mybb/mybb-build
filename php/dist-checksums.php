@@ -1,6 +1,7 @@
 <?php
+declare(strict_types=1);
 
-$args = getopt(null, [
+$args = getopt('', [
     'standardFilesCsv:',
     'varyingEolEncodingFilesCsv:',
     'distSetSourceDirectory:',
@@ -8,15 +9,16 @@ $args = getopt(null, [
     'algorithm:',
 ]);
 
-function directoryStructureSort($a, $b) {
+function directoryStructureSort($a, $b)
+{
     $aNesting = substr_count($a, '/');
     $bNesting = substr_count($b, '/');
 
-    if ($aNesting == 0 && $bNesting == 0) {
+    if ($aNesting === 0 && $bNesting === 0) {
         return strnatcmp($a, $b);
-    } elseif ($aNesting == 0) {
+    } elseif ($aNesting === 0) {
         return 1;
-    } elseif ($bNesting == 0) {
+    } elseif ($bNesting === 0) {
         return -1;
     } else {
         $aParents = array_slice(explode('/', $a), 0, -1);
@@ -24,7 +26,7 @@ function directoryStructureSort($a, $b) {
 
         foreach ($aParents as $order => $name) {
             if (isset($bParents[$order])) {
-                if ($name != $bParents[$order]) {
+                if ($name !== $bParents[$order]) {
                     return strnatcmp($name, $bParents[$order]);
                 }
             } else {

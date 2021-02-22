@@ -1,6 +1,7 @@
 <?php
+declare(strict_types=1);
 
-$args = getopt(null, [
+$args = getopt('', [
     'distSetSourceDirectory:',
     'targetVersionCode:',
     'distChangedTemplatesFile:',
@@ -13,7 +14,7 @@ $xml = simplexml_load_file($args['distSetSourceDirectory'] . '/install/resources
 foreach ($xml->templates[0]->template as $element) {
     $version = (string)$element->attributes()['version'];
 
-    if ($version == $args['targetVersionCode']) {
+    if ($version === $args['targetVersionCode']) {
         $name = $element->attributes()['name'];
         $templateNames[] = (string)$name;
     }

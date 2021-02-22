@@ -1,6 +1,7 @@
 <?php
+declare(strict_types=1);
 
-$args = getopt(null, [
+$args = getopt('', [
     'buildDirectory:',
     'distChangedFilesFile:',
     'distRemovedFilesFile:',
@@ -32,15 +33,16 @@ function arrayToYml($array, $level = 1)
     return $output;
 }
 
-function directoryStructureSort($a, $b) {
+function directoryStructureSort($a, $b)
+{
     $aNesting = substr_count($a, '/');
     $bNesting = substr_count($b, '/');
 
-    if ($aNesting == 0 && $bNesting == 0) {
+    if ($aNesting === 0 && $bNesting === 0) {
         return strnatcmp($a, $b);
-    } elseif ($aNesting == 0) {
+    } elseif ($aNesting === 0) {
         return 1;
-    } elseif ($bNesting == 0) {
+    } elseif ($bNesting === 0) {
         return -1;
     } else {
         $aParents = array_slice(explode('/', $a), 0, -1);
@@ -48,7 +50,7 @@ function directoryStructureSort($a, $b) {
 
         foreach ($aParents as $order => $name) {
             if (isset($bParents[$order])) {
-                if ($name != $bParents[$order]) {
+                if ($name !== $bParents[$order]) {
                     return strnatcmp($name, $bParents[$order]);
                 }
             } else {
@@ -159,14 +161,14 @@ $changedLanguageFilesNumberYml = null;
 
 $realpath = realpath($args['updateSetDirectory'] . '/' . $args['languageFilesPackageDirectory']);
 
-if (is_dir($realpath)) {
+if ($realpath !== false && is_dir($realpath)) {
     $count = 0;
 
-    $RecursiveDirectoryIterator = new RecursiveDirectoryIterator($realpath);
-    $RecursiveIteratorIterator = new RecursiveIteratorIterator($RecursiveDirectoryIterator);
+    $recursiveDirectoryIterator = new RecursiveDirectoryIterator($realpath);
+    $recursiveIteratorIterator = new RecursiveIteratorIterator($recursiveDirectoryIterator);
 
-    foreach ($RecursiveIteratorIterator as $path) {
-        if (is_file($path)) {
+    foreach ($recursiveIteratorIterator as $fileInfo) {
+        if ($fileInfo->isFile()) {
             $count++;
         }
     }

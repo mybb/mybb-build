@@ -1,6 +1,7 @@
 <?php
+declare(strict_types=1);
 
-$args = getopt(null, [
+$args = getopt('', [
     'distFilesCsv:',
     'previousFilesCsv:',
     'previousSourceDirectory:',
@@ -10,15 +11,16 @@ $args = getopt(null, [
     'distRemovedFilesFile:',
 ]);
 
-function directoryStructureSort($a, $b) {
+function directoryStructureSort($a, $b)
+{
     $aNesting = substr_count($a, '/');
     $bNesting = substr_count($b, '/');
 
-    if ($aNesting == 0 && $bNesting == 0) {
+    if ($aNesting === 0 && $bNesting === 0) {
         return strnatcmp($a, $b);
-    } elseif ($aNesting == 0) {
+    } elseif ($aNesting === 0) {
         return 1;
-    } elseif ($bNesting == 0) {
+    } elseif ($bNesting === 0) {
         return -1;
     } else {
         $aParents = array_slice(explode('/', $a), 0, -1);
@@ -26,7 +28,7 @@ function directoryStructureSort($a, $b) {
 
         foreach ($aParents as $order => $name) {
             if (isset($bParents[$order])) {
-                if ($name != $bParents[$order]) {
+                if ($name !== $bParents[$order]) {
                     return strnatcmp($name, $bParents[$order]);
                 }
             } else {
@@ -47,7 +49,7 @@ function files_equal($file1Path, $file2Path)
 {
     $blockSize = 8192;
 
-    if (filesize($file1Path) == filesize($file2Path)) {
+    if (filesize($file1Path) === filesize($file2Path)) {
         $result = true;
 
         $file1Handle = fopen($file1Path, 'rb');
@@ -118,12 +120,12 @@ if (!empty($changedFileList)) {
 // save a list of removed files
 $removedFileList = [];
 
-$RecursiveDirectoryIterator = new RecursiveDirectoryIterator(realpath($args['previousSourceDirectory']));
-$RecursiveIteratorIterator = new RecursiveIteratorIterator($RecursiveDirectoryIterator);
+$recursiveDirectoryIterator = new RecursiveDirectoryIterator(realpath($args['previousSourceDirectory']));
+$recursiveIteratorIterator = new RecursiveIteratorIterator($recursiveDirectoryIterator);
 
-foreach ($RecursiveIteratorIterator as $filePath) {
-    if (is_file($filePath)) {
-        $previousPackageFilePath = str_replace(realpath($args['previousSourceDirectory']) . '/', null, realpath($filePath));
+foreach ($recursiveIteratorIterator as $fileInfo) {
+    if ($fileInfo->isFile()) {
+        $previousPackageFilePath = str_replace(realpath($args['previousSourceDirectory']) . '/', null, $fileInfo->getRealPath());
 
         if (!in_array($previousPackageFilePath, $fileList)) {
             $removedFileList[] = $previousPackageFilePath;
