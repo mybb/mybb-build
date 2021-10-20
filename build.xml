@@ -48,6 +48,7 @@
         <exclude name="**/.Trashes"></exclude>
         <exclude name="**/ehthumbs.db"></exclude>
         <exclude name="**/Thumbs.db"></exclude>
+        <exclude name=".editorconfig"></exclude>
         <exclude name=".gitignore"></exclude>
         <exclude name="**/.gitkeep"></exclude>
         <exclude name="CODE_OF_CONDUCT.md"></exclude>
