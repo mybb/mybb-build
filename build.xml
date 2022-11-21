@@ -15,7 +15,7 @@
 
     <!-- project settings -->
     <propertyregex property="targetVersionCode" override="false" subject="${targetVersion}" pattern="[^0-9a-z]" replace="" match="$1" defaultValue="$0" />
-    <property name="inputFilesRepositoryBranch" override="false" value="${sourceRespositoryBranch}" />
+    <property name="inputFilesRepositoryBranch" override="false" value="${sourceRepositoryBranch}" />
 
     <property name="installPackageSubdirectory" value="install" />
     <property name="languageFilesPackageDirectory" value="inc/languages/english/" />
@@ -120,9 +120,12 @@
     <!-- build process: input preparation -->
     <target name="remote-data" description="Fetches additional build files from specified repository">
         <if>
-            <not>
-                <equals arg1="${env.INPUT_FILES_REPOSITORY}" arg2="" />
-            </not>
+            <and>
+                <isset property="env.INPUT_FILES_REPOSITORY" />
+                <not>
+                    <equals arg1="${env.INPUT_FILES_REPOSITORY}" arg2="" />
+                </not>
+            </and>
             <then>
                 <mkdir dir="${gitDirectory}" />
 
