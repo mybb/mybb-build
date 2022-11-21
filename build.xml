@@ -23,7 +23,6 @@
     <property name="classCoreVersionRegex">public \$version = "([0-9a-zA-Z.-]+)";</property>
     <property name="englishManifestVersionRegex">\$langinfo\['version'\] = "([0-9a-zA-Z.-]+)";</property>
     <property name="masterThemeManifestVersionRegex"><![CDATA[<theme name="MyBB Master Style" version="([0-9a-zA-Z.-]+)">]]></property>
-    <property name="changedTemplatesRegex"><![CDATA[<template name="()" version="${targetVersionCode}">]]></property>
 
     <property name="sourceGitRepository" value="https://github.com/mybb/mybb.git" />
 
