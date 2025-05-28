@@ -128,7 +128,13 @@
             <then>
                 <mkdir dir="${gitDirectory}" />
 
-                <exec dir="${gitDirectory}" command="git clone ${env.INPUT_FILES_REPOSITORY} --depth=1 --branch=${inputFilesRepositoryBranch} ./" checkreturn="true" />
+                <exec dir="${gitDirectory}" executable="git" checkreturn="true">
+                    <arg value="clone" />
+                    <arg value="${env.INPUT_FILES_REPOSITORY}" />
+                    <arg value="--depth=1" />
+                    <arg value="--branch=${inputFilesRepositoryBranch}" />
+                    <arg value="./" />
+                </exec>
 
                 <copy todir="${project.basedir}" preservelastmodified="true">
                     <fileset dir="${gitDirectory}">
@@ -152,9 +158,13 @@
             <then>
                 <mkdir dir="${gitDirectory}" />
 
-                <property name="gitCloneCommand" value="git clone ${sourceGitRepository} --depth=1 --branch=${sourceRepositoryBranch} ./" override="true" />
-                <echo message="${gitCloneCommand}" />
-                <exec dir="${gitDirectory}" command="${gitCloneCommand}" checkreturn="true" />
+                <exec dir="${gitDirectory}" executable="git" checkreturn="true">
+                    <arg value="clone" />
+                    <arg value="${sourceGitRepository}" />
+                    <arg value="--depth=1" />
+                    <arg value="--branch=${sourceRepositoryBranch}" />
+                    <arg value="./" />
+                </exec>
 
                 <copy todir="${distSetSourceDirectory}" preservelastmodified="true">
                     <fileset dir="${gitDirectory}">
@@ -180,9 +190,13 @@
             <then>
                 <mkdir dir="${gitDirectory}" />
 
-                <property name="gitCloneCommand" value="git clone ${sourceGitRepository} --depth=1 --branch=${previousSourceRepositoryBranch} ./" override="true" />
-                <echo message="${gitCloneCommand}" />
-                <exec dir="${gitDirectory}" command="${gitCloneCommand}" checkreturn="true" />
+                <exec dir="${gitDirectory}" executable="git" checkreturn="true">
+                    <arg value="clone" />
+                    <arg value="${sourceGitRepository}" />
+                    <arg value="--depth=1" />
+                    <arg line="--branch=${previousSourceRepositoryBranch}" />
+                    <arg value="./" />
+                </exec>
 
                 <copy todir="${previousSourceDirectoryInternal}" preservelastmodified="true">
                     <fileset dir="${gitDirectory}">
@@ -289,8 +303,10 @@
         </fileset>
         <pathconvert pathsep="," property="varyingEolEncodingFiles" refid="varyingEolEncodingFiles" />
 
-        <exec passthru="true" command="php php/normalize-eol.php
-            --varyingEolEncodingFiles '${varyingEolEncodingFiles}'" />
+        <exec executable="php" passthru="true">
+            <arg value="php/normalize-eol.php" />
+            <arg line="--varyingEolEncodingFiles '${varyingEolEncodingFiles}'" />
+        </exec>
     </target>
 
     <!-- build process: distribution set metadata -->
@@ -311,20 +327,24 @@
         </fileset>
         <pathconvert pathsep="," property="standardFilesCsv" refid="standardFiles" />
 
-        <exec passthru="true" command="php php/dist-checksums.php
-            --standardFilesCsv '${standardFilesCsv}'
-            --varyingEolEncodingFilesCsv '${varyingEolEncodingFilesCsv}'
-            --distSetSourceDirectory '${distSetSourceDirectory}'
-            --distChecksumsFile '${distChecksumsFile}'
-            --algorithm 'sha512'" />
+        <exec executable="php" passthru="true">
+            <arg value="php/dist-checksums.php" />
+            <arg line="--standardFilesCsv '${standardFilesCsv}'" />
+            <arg line="--varyingEolEncodingFilesCsv '${varyingEolEncodingFilesCsv}'" />
+            <arg line="--distSetSourceDirectory '${distSetSourceDirectory}'" />
+            <arg line="--distChecksumsFile '${distChecksumsFile}'" />
+            <arg line="--algorithm 'sha512'" />
+        </exec>
     </target>
 
     <target name="plugin-hooks" description="Generates a list of plugin hooks basing on the target file set" depends="copy-clean">
         <delete file="${distPluginHooksFile}" quiet="true" />
-        <exec passthru="true" command="php php/plugin-hooks.php
-            --distSetSourceDirectory '${distSetSourceDirectory}'
-            --targetVersionCode '${targetVersionCode}'
-            --distPluginHooksFile '${distPluginHooksFile}'" />
+        <exec executable="php" passthru="true">
+            <arg value="php/plugin-hooks.php" />
+            <arg line="--distSetSourceDirectory '${distSetSourceDirectory}'" />
+            <arg line="--targetVersionCode '${targetVersionCode}'" />
+            <arg line="--distPluginHooksFile '${distPluginHooksFile}'" />
+        </exec>
     </target>
 
     <!-- build process: update set operations -->
@@ -345,14 +365,16 @@
 
         <mkdir dir="${updateSetDirectory}" />
 
-        <exec passthru="true" command="php php/updateset.php
-            --distFilesCsv '${distFilesCsv}'
-            --previousFilesCsv '${previousFilesCsv}'
-            --previousSourceDirectory '${previousSourceDirectoryInternal}'
-            --distSetSourceDirectory '${distSetSourceDirectory}'
-            --outputDirectory '${updateSetDirectory}'
-            --distChangedFilesFile '${distChangedFilesFile}'
-            --distRemovedFilesFile '${distRemovedFilesFile}'" />
+        <exec executable="php" passthru="true">
+            <arg value="php/updateset.php" />
+            <arg line="--distFilesCsv '${distFilesCsv}'" />
+            <arg line="--previousFilesCsv '${previousFilesCsv}'" />
+            <arg line="--previousSourceDirectory '${previousSourceDirectoryInternal}'" />
+            <arg line="--distSetSourceDirectory '${distSetSourceDirectory}'" />
+            <arg line="--outputDirectory '${updateSetDirectory}'" />
+            <arg line="--distChangedFilesFile '${distChangedFilesFile}'" />
+            <arg line="--distRemovedFilesFile '${distRemovedFilesFile}'" />
+        </exec>
 
         <copy todir="${updateSetDirectory}" preservelastmodified="true">
             <filelist dir="${distSetSourceDirectory}" listfile="${distChangedFilesFile}" />
@@ -379,10 +401,13 @@
     <!-- build process: update set metadata -->
     <target name="changed-templates" description="Generates a list of templates set to the target version" depends="updateset">
         <delete file="${distChangedTemplatesFile}" quiet="true" />
-        <exec passthru="true" command="php php/changed-templates.php
-            --distSetSourceDirectory '${distSetSourceDirectory}'
-            --targetVersionCode '${targetVersionCode}'
-            --distChangedTemplatesFile '${distChangedTemplatesFile}'" />
+        
+        <exec executable="php" passthru="true">
+            <arg value="php/changed-templates.php" />
+            <arg line="--distSetSourceDirectory '${distSetSourceDirectory}'" />
+            <arg line="--targetVersionCode '${targetVersionCode}'" />
+            <arg line="--distChangedTemplatesFile '${distChangedTemplatesFile}'" />
+        </exec>
     </target>
 
     <!-- build process: package operations -->
@@ -417,7 +442,10 @@
             <param value="${packageDate}" />
         </php>
 
-        <exec command="strip-nondeterminism --timestamp ${packageDateTimestamp} ${buildDirectory}/${distSetName}.zip" checkreturn="true" />
+        <exec executable="strip-nondeterminism" checkreturn="true">
+            <arg line="--timestamp ${packageDateTimestamp}" />
+            <arg value="${buildDirectory}/${distSetName}.zip" />
+        </exec>
     </target>
 
     <target name="updateset-package-determinism" description="Strips non-deterministic information from the update set package archive" depends="updateset-package">
@@ -425,36 +453,45 @@
             <param value="${packageDate}" />
         </php>
 
-        <exec command="strip-nondeterminism --timestamp ${packageDateTimestamp} ${buildDirectory}/${updateSetName}.zip" checkreturn="true" />
+        <exec executable="strip-nondeterminism" checkreturn="true">
+            <arg line="--timestamp ${packageDateTimestamp}" />
+            <arg value="${buildDirectory}/${updateSetName}.zip" />
+        </exec>
     </target>
 
     <!-- build process: package metadata -->
     <target name="package-checksums" description="Creates checksums of the target file set archive" depends="package">
-        <exec passthru="true" command="php php/file-checksums.php
-            --path '${buildDirectory}/${distSetName}.zip'
-            --algorithms 'md5,sha1,sha256,sha512'" />
+        <exec executable="php" passthru="true">
+            <arg value="php/file-checksums.php" />
+            <arg line="--path '${buildDirectory}/${distSetName}.zip'" />
+            <arg line="--algorithms 'md5,sha1,sha256,sha512'" />
+        </exec>
     </target>
 
     <target name="updateset-package-checksums" description="Creates checksums of the update package set archive" depends="updateset-package">
-        <exec passthru="true" command="php php/file-checksums.php
-            --path '${buildDirectory}/${updateSetName}.zip'
-            --algorithms 'md5,sha1,sha256,sha512'" />
+        <exec executable="php" passthru="true">
+            <arg value="php/file-checksums.php" />
+            <arg line="--path '${buildDirectory}/${updateSetName}.zip'" />
+            <arg line="--algorithms 'md5,sha1,sha256,sha512'" />
+        </exec>
     </target>
 
     <target name="version-data" description="Generates a YAML data file for the target version" depends="package,package-checksums">
         <delete file="${distVersionDataFile}" quiet="true" />
-        <exec passthru="true" command="php php/version-data.php
-            --buildDirectory '${buildDirectory}'
-            --distChangedFilesFile '${distChangedFilesFile}'
-            --distRemovedFilesFile '${distRemovedFilesFile}'
-            --distChangedTemplatesFile '${distChangedTemplatesFile}'
-            --updateSetDirectory '${updateSetDirectory}'
-            --languageFilesPackageDirectory '${languageFilesPackageDirectory}'
-            --distSetName '${distSetName}'
-            --updateSetName '${updateSetName}'
-            --targetVersion '${targetVersion}'
-            --targetVersionCode '${targetVersionCode}'
-            --distVersionDataFile '${distVersionDataFile}'" />
+        <exec executable="php" passthru="true">
+            <arg value="php/version-data.php" />
+            <arg line="--buildDirectory '${buildDirectory}'" />
+            <arg line="--distChangedFilesFile '${distChangedFilesFile}'" />
+            <arg line="--distRemovedFilesFile '${distRemovedFilesFile}'" />
+            <arg line="--distChangedTemplatesFile '${distChangedTemplatesFile}'" />
+            <arg line="--updateSetDirectory '${updateSetDirectory}'" />
+            <arg line="--languageFilesPackageDirectory '${languageFilesPackageDirectory}'" />
+            <arg line="--distSetName '${distSetName}'" />
+            <arg line="--updateSetName '${updateSetName}'" />
+            <arg line="--targetVersion '${targetVersion}'" />
+            <arg line="--targetVersionCode '${targetVersionCode}'" />
+            <arg line="--distVersionDataFile '${distVersionDataFile}'" />
+        </exec>
     </target>
 
     <!-- build process: output -->
