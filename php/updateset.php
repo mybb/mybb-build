@@ -88,7 +88,7 @@ $targetEolCharacter = "\n";
 foreach ($files as $filePath) {
     $copy = false;
 
-    $packageFilePath = str_replace(realpath($args['distSetSourceDirectory']) . '/', null, realpath($filePath));
+    $packageFilePath = str_replace(realpath($args['distSetSourceDirectory']) . '/', '', realpath($filePath));
 
     $fileList[] = $packageFilePath;
 
@@ -125,7 +125,7 @@ $recursiveIteratorIterator = new RecursiveIteratorIterator($recursiveDirectoryIt
 
 foreach ($recursiveIteratorIterator as $fileInfo) {
     if ($fileInfo->isFile()) {
-        $previousPackageFilePath = str_replace(realpath($args['previousSourceDirectory']) . '/', null, $fileInfo->getRealPath());
+        $previousPackageFilePath = str_replace(realpath($args['previousSourceDirectory']) . '/', '', $fileInfo->getRealPath());
 
         if (!in_array($previousPackageFilePath, $fileList)) {
             $removedFileList[] = $previousPackageFilePath;

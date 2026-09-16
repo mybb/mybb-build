@@ -17,7 +17,7 @@ $args = getopt('', [
 
 function arrayToYml($array, $level = 1)
 {
-    $output = null;
+    $output = '';
 
     foreach ($array as $key => $value) {
         $output .= str_repeat('  ', $level) . '- ';
@@ -69,7 +69,7 @@ function directoryStructureSort($a, $b)
 // changed files YML
 $file = $args['distChangedFilesFile'];
 
-$changedFilesYml = null;
+$changedFilesYml = '';
 
 if (file_exists($file)) {
     $lines = file($file);
@@ -102,7 +102,7 @@ YML;
 // removed files YML
 $file = $args['distRemovedFilesFile'];
 
-$removedFilesYml = null;
+$removedFilesYml = '';
 
 if (file_exists($file)) {
     $lines = file($file);
@@ -133,7 +133,7 @@ YML;
 }
 
 // changed templates YML
-$changedTemplatesYml = null;
+$changedTemplatesYml = '';
 
 $changedTemplatesFile = $args['distChangedTemplatesFile'];
 
@@ -157,7 +157,7 @@ YML;
 }
 
 // changed language files YML
-$changedLanguageFilesNumberYml = null;
+$changedLanguageFilesNumberYml = '';
 
 $realpath = realpath($args['updateSetDirectory'] . '/' . $args['languageFilesPackageDirectory']);
 
@@ -185,7 +185,7 @@ YML;
 $distSetPackageSize = round(filesize($args['buildDirectory'] . '/' . $args['distSetName'].'.zip') / 1024 / 1024, 2);
 $updateSetPackageSize = round(filesize($args['buildDirectory'] . '/' . $args['updateSetName'].'.zip') / 1024 / 1024, 2);
 
-$distSetPackageChecksumsYml = null;
+$distSetPackageChecksumsYml = '';
 
 $filePath = $args['buildDirectory'] . '/' .$args['distSetName'].'.zip.checksums';
 
@@ -206,7 +206,7 @@ YML;
     }
 }
 
-$updateSetPackageChecksumsYml = null;
+$updateSetPackageChecksumsYml = '';
 
 $filePath = $args['buildDirectory'] . '/' . $args['updateSetName'] . '.zip.checksums';
 

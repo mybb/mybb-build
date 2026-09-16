@@ -51,7 +51,7 @@ $recursiveIteratorIterator = new RecursiveIteratorIterator($recursiveDirectoryIt
 
 foreach ($recursiveIteratorIterator as $fileInfo) {
     if ($fileInfo->isFile() && $fileInfo->getExtension() === 'php') {
-        $pathNormalized = str_replace($realpath . DIRECTORY_SEPARATOR, null, $fileInfo->getRealPath());
+        $pathNormalized = str_replace($realpath . DIRECTORY_SEPARATOR, '', $fileInfo->getRealPath());
         $pathNormalized = str_replace('\\', '/', $pathNormalized);
 
         $fileHandle = fopen($fileInfo->getRealPath(), 'r');

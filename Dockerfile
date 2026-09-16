@@ -1,6 +1,6 @@
-FROM php:7.4-cli
+FROM php:8.5-cli
 
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN set -e; \
 	\
@@ -11,14 +11,12 @@ RUN set -e; \
 	\
 	# Install required packages
 	apt-get install -qq --no-install-suggests --no-install-recommends \
-		software-properties-common \
-		python3-software-properties \
 		git \
 		libzip-dev \
 		unzip \
 		wget \
 		strip-nondeterminism \
-		ssh \
+		ssh-client \
 		> /dev/null; \
 	\
 	docker-php-ext-install zip \

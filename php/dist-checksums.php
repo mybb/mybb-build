@@ -50,7 +50,7 @@ function processFile($filePath, $varyingEolEncoding = false)
 
     $fileHashes = [];
 
-    $packageFilePath = str_replace($args['distSetSourceDirectory'] . '/', null, $filePath);
+    $packageFilePath = str_replace($args['distSetSourceDirectory'] . '/', '', $filePath);
 
     if ($varyingEolEncoding) {
         $fileHashes[] = hash($args['algorithm'], str_replace(["\r\n", "\r"], "\n", $content));

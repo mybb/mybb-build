@@ -2,10 +2,10 @@ services:
   phing:
     image: mybb-build
     build:
-      context: ${PWD}
+      context: .
     env_file:
       - secrets.env
     volumes:
-      - ${PWD}/input:/home/user/input/
-      - ${PWD}/output:/home/user/output/
-      - ${PWD}/secrets:/home/user/secrets/:ro
+      - ./input:/home/user/input/
+      - ./output:/home/user/output/
+      - ./secrets:/home/user/secrets/:ro
